@@ -37,7 +37,7 @@ WHERE id = $1
 RETURNING *;
 
 -- name: DeleteUser :exec
-DELETE FROM users WHERE id = $1
+DELETE FROM users WHERE id = $1;
 
 -- name: GetUserCategories :many
 SELECT * FROM categories
@@ -49,14 +49,16 @@ WHERE user_id = $1;
 
 -- name: GetUserAccounts :many
 SELECT a.*
-FROM items i WHERE i.user_id = $1
-JOIN accounts a ON i.id = a.item_id;
+FROM items i
+JOIN accounts a ON i.id = a.item_id
+WHERE i.user_id = $1;
 
 -- name: GetUserTransactions :many
 SELECT t.*
-FROM items i WHERE i.user_id = $1
+FROM items i
 JOIN accounts a ON i.id = a.item_id
-JOIN transactions t ON a.id = t.account_id;
+JOIN transactions t ON a.id = t.account_id
+WHERE i.user_id = $1;
 
 -----------------------------
 -- Categories related queries
@@ -98,7 +100,7 @@ WHERE id = $1;
 -- name: StoreItem :one
 INSERT INTO items (
     user_id,
-    access_token
+    access_token,
     name
 ) VALUES (
     $1, $2, $3
@@ -141,6 +143,9 @@ UPDATE accounts
     set name = $2
 WHERE id = $1
 RETURNING *;
+
+-- name: DeleteAccount :exec
+DELETE FROM accounts WHERE id = $1;
 
 -- name: GetAccountTransactions :one
 SELECT t.*
