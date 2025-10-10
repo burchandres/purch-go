@@ -49,17 +49,14 @@ WHERE user_id = $1;
 
 -- name: GetUserAccounts :many
 SELECT a.*
-FROM users u 
-JOIN items i ON u.id = i.id
+FROM items i WHERE i.user_id = $1
 JOIN accounts a ON i.id = a.item_id;
 
 -- name: GetUserTransactions :many
 SELECT t.*
-FROM users u
-JOIN items i ON u.id = i.user_id
+FROM items i WHERE i.user_id = $1
 JOIN accounts a ON i.id = a.item_id
-JOIN transactions t on a.id = t.account_id
-;
+JOIN transactions t ON a.id = t.account_id;
 
 -----------------------------
 -- Categories related queries
@@ -149,3 +146,36 @@ RETURNING *;
 SELECT t.*
 FROM transactions t
 JOIN accounts a ON t.account_id = a.id;
+
+-------------------------------
+-- Transactions related queries
+-------------------------------
+
+-- name: GetTransaction :one
+SELECT * FROM transactions
+WHERE id = $1;
+
+-- name: StoreTransaction :one
+INSERT INTO transactions (
+    account_id,
+    category_id,
+    authorized_date,
+    merchant,
+    amount,
+    currency_code,
+    pending
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7
+)
+RETURNING *;
+
+-- name: UpdateTransaction :one
+UPDATE transactions
+    set settled_date = $2,
+    amount = $3,
+    pending = $4
+WHERE id = $1
+RETURNING *;
+
+-- name: DeleteTransaction :exec
+DELETE FROM transactions WHERE id = $1;
