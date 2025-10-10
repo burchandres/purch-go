@@ -1,7 +1,7 @@
 CREATE TABLE users (
     id bigserial,
     first_name text NOT NULL,
-    last_name text,
+    last_name text NOT NULL,
     username text NOT NULL,
     password text NOT NULL,
     is_active bool NOT NULL DEFAULT=false,
@@ -15,7 +15,7 @@ CREATE TABLE categories (
     id bigserial,
     user_id bigint REFERENCES users (id) ON DELETE CASCADE,
     label text NOT NULL,
-    current_spending numeric NOT NULL CHECK (current_spending >= 0),
+    current_spending numeric NOT NULL DEFAULT=0,
     allocated_spending numeric NOT NULL CHECK (allocated_spending > 0),
 
     PRIMARY KEY (id, user_id)
