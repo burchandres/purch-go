@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     last_name text NOT NULL,
     username text NOT NULL,
     password text NOT NULL,
-    income money,
+    income numeric,
     income_rate text,
 
     PRIMARY KEY (id, username)
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     authorized_date date NOT NULL default current_date,
     settled_date date,
     merchant text,
-    amount money NOT NULL,
+    amount numeric NOT NULL default 0,
     currency_code text,
     pending bool NOT NULL DEFAULT false,
 

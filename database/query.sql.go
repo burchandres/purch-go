@@ -508,12 +508,12 @@ RETURNING id, first_name, last_name, username, password, income, income_rate
 `
 
 type StoreUserParams struct {
-	FirstName  string         `form:"first_name"`
-	LastName   string         `form:"last_name"`
-	Username   string         `form:"username"`
-	Password   string         `form:"password"`
-	Income     pgtype.Numeric `form:"income"`
-	IncomeRate pgtype.Text    `form:"income_rate"`
+	FirstName  string         `form:"first_name"  json:"first_name"`
+	LastName   string         `form:"last_name"   json:"last_name"`
+	Username   string         `form:"username"    json:"username"`
+	Password   string         `form:"password"    json:"password"`
+	Income     pgtype.Numeric `form:"income"      json:"income"`
+	IncomeRate pgtype.Text    `form:"income_rate" json:"income_rate"`
 }
 
 func (q *Queries) StoreUser(ctx context.Context, arg StoreUserParams) (User, error) {
