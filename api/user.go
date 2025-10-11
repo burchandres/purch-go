@@ -124,5 +124,5 @@ func logout(c *gin.Context) {
 		false,
 		true,
 	)
-	c.JSON(http.StatusOK, gin.H{"message": "logout successful"})
+	c.JSON(http.StatusOK, gin.H{"message": "logout successful, cookie cleared"})
 }
