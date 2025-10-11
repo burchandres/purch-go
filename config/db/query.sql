@@ -16,11 +16,10 @@ INSERT INTO users (
     last_name,
     username,
     password,
-    is_active,
     income,
     income_rate
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1, $2, $3, $4, $5, $6
 )
 RETURNING *;
 
@@ -30,9 +29,8 @@ UPDATE users
     last_name = $3,
     username = $4,
     password = $5,
-    is_active = $6,
-    income = $7,
-    income_rate = $8
+    income = $6,
+    income_rate = $7
 WHERE id = $1
 RETURNING *;
 

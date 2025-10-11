@@ -219,7 +219,7 @@ func (q *Queries) GetUserAccounts(ctx context.Context, userID int64) ([]Account,
 
 const getUserById = `-- name: GetUserById :one
 
-SELECT id, first_name, last_name, username, password, is_active, income, income_rate FROM users
+SELECT id, first_name, last_name, username, password, income, income_rate FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -235,7 +235,6 @@ func (q *Queries) GetUserById(ctx context.Context, id int64) (User, error) {
 		&i.LastName,
 		&i.Username,
 		&i.Password,
-		&i.IsActive,
 		&i.Income,
 		&i.IncomeRate,
 	)
@@ -243,7 +242,7 @@ func (q *Queries) GetUserById(ctx context.Context, id int64) (User, error) {
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, first_name, last_name, username, password, is_active, income, income_rate FROM users
+SELECT id, first_name, last_name, username, password, income, income_rate FROM users
 WHERE username = $1 LIMIT 1
 `
 
@@ -256,7 +255,6 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.LastName,
 		&i.Username,
 		&i.Password,
-		&i.IsActive,
 		&i.Income,
 		&i.IncomeRate,
 	)
@@ -501,13 +499,12 @@ INSERT INTO users (
     last_name,
     username,
     password,
-    is_active,
     income,
     income_rate
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1, $2, $3, $4, $5, $6
 )
-RETURNING id, first_name, last_name, username, password, is_active, income, income_rate
+RETURNING id, first_name, last_name, username, password, income, income_rate
 `
 
 type StoreUserParams struct {
@@ -515,7 +512,6 @@ type StoreUserParams struct {
 	LastName   string
 	Username   string
 	Password   string
-	IsActive   bool
 	Income     pgtype.Numeric
 	IncomeRate pgtype.Text
 }
@@ -526,7 +522,6 @@ func (q *Queries) StoreUser(ctx context.Context, arg StoreUserParams) (User, err
 		arg.LastName,
 		arg.Username,
 		arg.Password,
-		arg.IsActive,
 		arg.Income,
 		arg.IncomeRate,
 	)
@@ -537,7 +532,6 @@ func (q *Queries) StoreUser(ctx context.Context, arg StoreUserParams) (User, err
 		&i.LastName,
 		&i.Username,
 		&i.Password,
-		&i.IsActive,
 		&i.Income,
 		&i.IncomeRate,
 	)
@@ -661,11 +655,10 @@ UPDATE users
     last_name = $3,
     username = $4,
     password = $5,
-    is_active = $6,
-    income = $7,
-    income_rate = $8
+    income = $6,
+    income_rate = $7
 WHERE id = $1
-RETURNING id, first_name, last_name, username, password, is_active, income, income_rate
+RETURNING id, first_name, last_name, username, password, income, income_rate
 `
 
 type UpdateUserParams struct {
@@ -674,7 +667,6 @@ type UpdateUserParams struct {
 	LastName   string
 	Username   string
 	Password   string
-	IsActive   bool
 	Income     pgtype.Numeric
 	IncomeRate pgtype.Text
 }
@@ -686,7 +678,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.LastName,
 		arg.Username,
 		arg.Password,
-		arg.IsActive,
 		arg.Income,
 		arg.IncomeRate,
 	)
@@ -697,7 +688,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.LastName,
 		&i.Username,
 		&i.Password,
-		&i.IsActive,
 		&i.Income,
 		&i.IncomeRate,
 	)

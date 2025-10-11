@@ -48,7 +48,6 @@ type User struct {
 	LastName   string
 	Username   string
 	Password   string
-	IsActive   bool
 	Income     pgtype.Numeric
 	IncomeRate pgtype.Text
 }

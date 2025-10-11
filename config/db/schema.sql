@@ -4,7 +4,6 @@ CREATE TABLE users (
     last_name text NOT NULL,
     username text NOT NULL,
     password text NOT NULL,
-    is_active bool NOT NULL DEFAULT false,
     income money,
     income_rate text,
 
