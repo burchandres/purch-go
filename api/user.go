@@ -20,10 +20,10 @@ func SetupUserEndpoints(r *gin.Engine) {
 		protected.GET("/info", getUserInfo)
 		// protected.GET("/verify-auth", verifyAuth)
 		protected.GET("/logout", logout)
-		// protected.POST("/update", updateUser)
+		protected.POST("/update", updateUser)
 		// protected.GET("/link-token", getLinkToken)
 		// protected.POST("/exchange-public-token", exchangePublicToken)
-		// protected.DELETE("/delete", deleteUser)
+		protected.DELETE("/delete", deleteUser)
 	}
 }
 
@@ -125,4 +125,67 @@ func logout(c *gin.Context) {
 		true,
 	)
 	c.JSON(http.StatusOK, gin.H{"message": "logout successful, cookie cleared"})
+}
+
+func deleteUser(c *gin.Context) {
+	db := database.GetPool()
+	queries := database.New(db)
+	// get user id from context
+	userID, exists := c.Get("user_id")
+	if !exists {
+		slog.Error("user id not found in context")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user id not found in context"})
+		return
+	}
+	// delete user from db
+	if err := queries.DeleteUser(c.Request.Context(), userID.(int64)); err != nil {
+		slog.Error("failed to delete user", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "user deleted"})
+}
+
+func updateUser(c *gin.Context) {
+	db := database.GetPool()
+	queries := database.New(db)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		slog.Error("user id not found in context")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user id not found in context"})
+		return
+	}
+	user, err := queries.GetUserById(c.Request.Context(), userID.(int64))
+	if err != nil {
+		slog.Error("failed to get user", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	// get update params
+	var updateParams database.UpdateUserParams
+	// get update params from request body
+	if err := c.BindJSON(&updateParams); err != nil {
+		slog.Error("failed to bind update params", "error", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	// hash password if changed
+	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(updateParams.Password)); err != nil {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(updateParams.Password), bcrypt.DefaultCost)
+		if err != nil {
+			slog.Error("failed to generate password hash for new password", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		updateParams.Password = string(hashedPassword)
+	}
+	// update user
+	user, err = queries.UpdateUser(c.Request.Context(), updateParams)
+	if err != nil {
+		slog.Error("failed to update user", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "user updated", "user": user})
 }
