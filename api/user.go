@@ -3,7 +3,6 @@ package api
 import (
 	"log/slog"
 	"net/http"
-	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -15,15 +14,17 @@ func SetupUserEndpoints(r *gin.Engine) {
 	r.POST("/user/register", registerUser)
 	r.GET("/user/login", setUserCookie)
 
-	// group := r.Group("/user")
-	// group.Use(AuthMiddleware)
-	// group.GET("/info", getUserInfo)
-	// group.GET("/verify-auth", verifyAuth)
-	// group.GET("/logout", logout)
-	// group.POST("/update", updateUser)
-	// group.GET("/link-token", getLinkToken)
-	// group.POST("/exchange-public-token", exchangePublicToken)
-	// group.DELETE("/delete", deleteUser)
+	protected := r.Group("/user")
+	protected.Use(authMiddleware())
+	{
+		protected.GET("/info", getUserInfo)
+		// protected.GET("/verify-auth", verifyAuth)
+		protected.GET("/logout", logout)
+		// protected.POST("/update", updateUser)
+		// protected.GET("/link-token", getLinkToken)
+		// protected.POST("/exchange-public-token", exchangePublicToken)
+		// protected.DELETE("/delete", deleteUser)
+	}
 }
 
 func registerUser(c *gin.Context) {
@@ -57,7 +58,7 @@ func registerUser(c *gin.Context) {
 func setUserCookie(c *gin.Context) {
 	db := database.GetPool()
 	queries := database.New(db)
-	// get user from db passed on provided username and password
+	// get user from db with provided username and password
 	username := c.Query("username")
 	slog.Info("setting cookie for user", "username", username)
 	user, err := queries.GetUserByUsername(c.Request.Context(), username)
@@ -73,9 +74,17 @@ func setUserCookie(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
+	// create jwt token for user to set in cookie
+	token, err := createToken(user.ID)
+	if err != nil {
+		slog.Error("failed to create token", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	// set cookie for user
 	c.SetCookie(
 		"purch_token",
-		fmt.Sprintf("%d", user.ID),
+		token,
 		1800,
 		"/",
 		"localhost",
@@ -83,4 +92,37 @@ func setUserCookie(c *gin.Context) {
 		true,
 	)
 	c.JSON(http.StatusOK, gin.H{"message": "user cookie set"})
+}
+
+func getUserInfo(c *gin.Context) {
+	db := database.GetPool()
+	queries := database.New(db)
+	// get user information from db
+	userID, exists := c.Get("user_id")
+	if !exists {
+		slog.Error("user id not found in context")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user id not found in context"})
+		return
+	}
+	user, err := queries.GetUserById(c.Request.Context(), userID.(int64))
+	if err != nil {
+		slog.Error("failed to get user", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, user)
+}
+
+func logout(c *gin.Context) {
+	// delete cookie for user
+	c.SetCookie(
+		"purch_token",
+		"",
+		-1,
+		"/",
+		"localhost",
+		false,
+		true,
+	)
+	c.JSON(http.StatusOK, gin.H{"message": "logout successful"})
 }

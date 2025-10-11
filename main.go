@@ -67,6 +67,6 @@ func getServer(config *utils.Config) *http.Server {
 	
 	return &http.Server{
 		Addr: ":8080",
-		Handler: router.Handler(),
+		Handler: router,
 	}
 }
