@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS users (
     id bigserial UNIQUE,
     first_name text NOT NULL,
     last_name text NOT NULL,
-    username text NOT NULL,
+    username text UNIQUE NOT NULL,
     password text NOT NULL,
     income numeric,
     income_rate text,

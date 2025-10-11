@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 
 	"purch/database"
 )
@@ -34,6 +35,14 @@ func registerUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	// hash the password before pushing to postgres
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(storeUserParams.Password), bcrypt.DefaultCost)
+	if err != nil {
+		slog.Error("failed to hash password", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	storeUserParams.Password = string(hashedPassword)
 
 	registeredUser, err := queries.StoreUser(c.Request.Context(), storeUserParams)
 	if err != nil {
