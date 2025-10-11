@@ -3,6 +3,7 @@ package api
 import (
 	"log/slog"
 	"net/http"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -12,7 +13,7 @@ import (
 
 func SetupUserEndpoints(r *gin.Engine) {
 	r.POST("/user/register", registerUser)
-	// r.GET("/user/login", getCookie)
+	r.GET("/user/login", setUserCookie)
 
 	// group := r.Group("/user")
 	// group.Use(AuthMiddleware)
@@ -51,4 +52,35 @@ func registerUser(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, registeredUser)
+}
+
+func setUserCookie(c *gin.Context) {
+	db := database.GetPool()
+	queries := database.New(db)
+	// get user from db passed on provided username and password
+	username := c.Query("username")
+	slog.Info("setting cookie for user", "username", username)
+	user, err := queries.GetUserByUsername(c.Request.Context(), username)
+	if err != nil {
+		slog.Error("user with provided username does not exist", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	// verify provided password
+	password := c.Query("password")
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		slog.Error("failed to verify password", "error", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+	c.SetCookie(
+		"purch_token",
+		fmt.Sprintf("%d", user.ID),
+		1800,
+		"/",
+		"localhost",
+		false,
+		true,
+	)
+	c.JSON(http.StatusOK, gin.H{"message": "user cookie set"})
 }
