@@ -25,7 +25,7 @@ func main() {
 	}
 	slog.Info("loaded config", "config", config)
 	// get API server
-	server := getServer(config)
+	server := getServer()
 	// setup database connection pool
 	if err = database.Init(config.GetPostgresURL()); err != nil {
 		slog.Error("failed to initialize database pool", "error", err)
@@ -54,14 +54,12 @@ func main() {
 	slog.Info("shutdown complete")
 }
 
-func getServer(config *utils.Config) *http.Server {
+func getServer() *http.Server {
 	router := gin.Default()
 
 	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-		  "message": "pong",
-		})
-	  })
+		c.JSON(200, gin.H{"message": "pong"})
+	})
 
 	api.SetupUserEndpoints(router)
 	
