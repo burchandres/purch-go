@@ -14,10 +14,16 @@ import (
 
 func main() {
 	server := getServer()
-
+	config, err := loadConfig()
+	slog.Info("loaded config", "config", config)
+	if err != nil {
+		slog.Error("failed to load config", "error", err)
+		panic(err)
+	}
+	
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("server error.", "error", err)
+			panic(err)
 		}
 	}()
 

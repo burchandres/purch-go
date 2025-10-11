@@ -19,6 +19,8 @@ services:
   purch:
     build: .
     container_name: service-purch
+    secrets:
+      - env
     ports:
       - "8080:8080"
     command: "./purch"
@@ -29,3 +31,7 @@ services:
 
 volumes:
   postgres_data:
+    
+secrets:
+  env:
+    file: .env

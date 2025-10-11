@@ -8,9 +8,13 @@ tasks:
     cmds:
       - docker compose build
 
+  # use a space delineated list 
+  # of individual services to bring down
+  # if you don't want to bring everything down
+  # e.g. task down -- postgres <-- only brings down the postgres container
   down:
     cmds:
-      - docker compose down
+      - docker compose -f docker-compose.yml down {{.CLI_ARGS}}
 
   # use a space delineated list 
   # of individual services to bring up 
@@ -19,3 +23,7 @@ tasks:
   up:
     cmds:
       - docker compose -f docker-compose.yml up {{.CLI_ARGS}} -d
+      
+  lint:
+    cmds:
+      - golangci-lint run
