@@ -1,10 +1,11 @@
-package main
+package utils
 
 import (
 	"os"
 	"strconv"
 	"strings"
 	"log/slog"
+	"fmt"
 	
 	"github.com/joho/godotenv"
 )
@@ -41,7 +42,18 @@ func (c *Config) GetPlaidProducts() []string {
 	return strings.Split(c.PlaidProducts, ",")
 }
 
-func loadConfig() (*Config, error) {
+func (c *Config) GetPostgresURL() string {
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/%s", 
+		c.PostgresUser, 
+		c.PostgresPassword, 
+		c.PostgresHost, 
+		c.PostgresPort, 
+		c.PostgresDatabase,
+	)
+}
+
+func LoadConfig() (*Config, error) {
 	// should be developing against docker deployment
 	if err := godotenv.Load("/run/secrets/env"); err != nil {
 		// if not check for a .env file in the current directory

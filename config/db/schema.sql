@@ -1,5 +1,5 @@
-CREATE TABLE users (
-    id bigserial,
+CREATE TABLE IF NOT EXISTS users (
+    id bigserial UNIQUE,
     first_name text NOT NULL,
     last_name text NOT NULL,
     username text NOT NULL,
@@ -10,8 +10,8 @@ CREATE TABLE users (
     PRIMARY KEY (id, username)
 );
 
-CREATE TABLE categories (
-    id bigserial,
+CREATE TABLE IF NOT EXISTS categories (
+    id bigserial UNIQUE,
     user_id bigint REFERENCES users (id) ON DELETE CASCADE,
     label text NOT NULL,
     current_spending numeric NOT NULL DEFAULT 0,
@@ -20,8 +20,8 @@ CREATE TABLE categories (
     PRIMARY KEY (id, user_id)
 );
 
-CREATE TABLE items (
-    id text,
+CREATE TABLE IF NOT EXISTS items (
+    id text UNIQUE,
     user_id bigint REFERENCES users (id) ON DELETE CASCADE,
     access_token text NOT NULL,
     name text NOT NULL,
@@ -30,18 +30,18 @@ CREATE TABLE items (
     PRIMARY KEY (id, user_id)
 );
 
-CREATE TABLE accounts (
-    id text,
+CREATE TABLE IF NOT EXISTS accounts (
+    id text UNIQUE,
     item_id text REFERENCES items (id) ON DELETE CASCADE,
     name text NOT NULL,
 
     PRIMARY KEY (id, item_id)
 );
 
-CREATE TABLE transactions (
-    id text,
+CREATE TABLE IF NOT EXISTS transactions (
+    id text UNIQUE,
     account_id text REFERENCES accounts (id) ON DELETE CASCADE,
-    category_id text REFERENCES categories (id),
+    category_id bigint REFERENCES categories (id),
     authorized_date date NOT NULL default current_date,
     settled_date date,
     merchant text,
