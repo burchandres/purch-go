@@ -26,7 +26,7 @@ func SetupUserEndpoints(r *gin.Engine) {
 		protected.GET("/logout", logout)
 		protected.POST("/update", updateUser)
 		protected.GET("/link-token", getLinkToken)
-		// protected.POST("/exchange-public-token", exchangePublicToken)
+		protected.POST("/exchange-public-token", exchangePublicToken)
 		protected.DELETE("/delete", deleteUser)
 	}
 }
