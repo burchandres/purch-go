@@ -372,12 +372,13 @@ RETURNING id, item_id, name
 `
 
 type StoreAccountParams struct {
+	ID     string
 	ItemID string
 	Name   string
 }
 
 func (q *Queries) StoreAccount(ctx context.Context, arg StoreAccountParams) (Account, error) {
-	row := q.db.QueryRow(ctx, storeAccount, arg.ItemID, arg.Name)
+	row := q.db.QueryRow(ctx, storeAccount, arg.ID, arg.ItemID, arg.Name)
 	var i Account
 	err := row.Scan(&i.ID, &i.ItemID, &i.Name)
 	return i, err
@@ -415,23 +416,25 @@ func (q *Queries) StoreCategory(ctx context.Context, arg StoreCategoryParams) (C
 
 const storeItem = `-- name: StoreItem :one
 INSERT INTO items (
+    id,
     user_id,
     access_token,
     name
 ) VALUES (
-    $1, $2, $3
+    $1, $2, $3, $4
 )
 RETURNING id, user_id, access_token, name, transaction_cursor
 `
 
 type StoreItemParams struct {
-	UserID      int64
-	AccessToken string
+	ID              string
+	UserID          int64
+	AccessToken     string
 	Name        string
 }
 
 func (q *Queries) StoreItem(ctx context.Context, arg StoreItemParams) (Item, error) {
-	row := q.db.QueryRow(ctx, storeItem, arg.UserID, arg.AccessToken, arg.Name)
+	row := q.db.QueryRow(ctx, storeItem, arg.ID, arg.UserID, arg.AccessToken, arg.Name)
 	var i Item
 	err := row.Scan(
 		&i.ID,
@@ -445,6 +448,7 @@ func (q *Queries) StoreItem(ctx context.Context, arg StoreItemParams) (Item, err
 
 const storeTransaction = `-- name: StoreTransaction :one
 INSERT INTO transactions (
+    id,
     account_id,
     category_id,
     authorized_date,
@@ -453,12 +457,13 @@ INSERT INTO transactions (
     currency_code,
     pending
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1, $2, $3, $4, $5, $6, $7, $8
 )
 RETURNING id, account_id, category_id, authorized_date, settled_date, merchant, amount, currency_code, pending
 `
 
 type StoreTransactionParams struct {
+	ID             string
 	AccountID      string
 	CategoryID     string
 	AuthorizedDate pgtype.Date
@@ -470,6 +475,7 @@ type StoreTransactionParams struct {
 
 func (q *Queries) StoreTransaction(ctx context.Context, arg StoreTransactionParams) (Transaction, error) {
 	row := q.db.QueryRow(ctx, storeTransaction,
+		arg.ID,
 		arg.AccountID,
 		arg.CategoryID,
 		arg.AuthorizedDate,

@@ -97,11 +97,12 @@ WHERE id = $1;
 
 -- name: StoreItem :one
 INSERT INTO items (
+    id,
     user_id,
     access_token,
     name
 ) VALUES (
-    $1, $2, $3
+    $1, $2, $3, $4
 )
 RETURNING *;
 
@@ -129,10 +130,11 @@ WHERE id = $1;
 
 -- name: StoreAccount :one
 INSERT INTO accounts (
+    id,
     item_id,
     name
 ) VALUES (
-    $1, $2
+    $1, $2, $3
 )
 RETURNING *;
 
@@ -160,6 +162,7 @@ WHERE id = $1;
 
 -- name: StoreTransaction :one
 INSERT INTO transactions (
+    id,
     account_id,
     category_id,
     authorized_date,
@@ -168,7 +171,7 @@ INSERT INTO transactions (
     currency_code,
     pending
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1, $2, $3, $4, $5, $6, $7, $8
 )
 RETURNING *;
 
