@@ -3,11 +3,14 @@ package api
 import (
 	"log/slog"
 	"net/http"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/plaid/plaid-go/v40/plaid"
 	"golang.org/x/crypto/bcrypt"
 
 	"purch/database"
+	"purch/utils"
 )
 
 func SetupUserEndpoints(r *gin.Engine) {
@@ -21,7 +24,7 @@ func SetupUserEndpoints(r *gin.Engine) {
 		// protected.GET("/verify-auth", verifyAuth)
 		protected.GET("/logout", logout)
 		protected.POST("/update", updateUser)
-		// protected.GET("/link-token", getLinkToken)
+		protected.GET("/link-token", getLinkToken)
 		// protected.POST("/exchange-public-token", exchangePublicToken)
 		protected.DELETE("/delete", deleteUser)
 	}
@@ -40,7 +43,7 @@ func registerUser(c *gin.Context) {
 	// hash the password before pushing to postgres
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(storeUserParams.Password), bcrypt.DefaultCost)
 	if err != nil {
-		slog.Error("failed to hash password", "error", err)
+		slog.Error("failed to hash password", "error", err, "endpoint", "/api/user/register")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -48,7 +51,7 @@ func registerUser(c *gin.Context) {
 
 	registeredUser, err := queries.StoreUser(c.Request.Context(), storeUserParams)
 	if err != nil {
-		slog.Error("failed to store user", "error", err)
+		slog.Error("failed to store user", "error", err, "endpoint", "/api/user/register")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -63,21 +66,21 @@ func setUserCookie(c *gin.Context) {
 	slog.Info("setting cookie for user", "username", username)
 	user, err := queries.GetUserByUsername(c.Request.Context(), username)
 	if err != nil {
-		slog.Error("user with provided username does not exist", "error", err)
+		slog.Error("user with provided username does not exist", "error", err, "endpoint", "/api/user/set")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	// verify provided password
 	password := c.Query("password")
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		slog.Error("failed to verify password", "error", err)
+		slog.Error("failed to verify password", "error", err, "endpoint", "/api/user/set")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 	// create jwt token for user to set in cookie
 	token, err := createToken(user.ID)
 	if err != nil {
-		slog.Error("failed to create token", "error", err)
+		slog.Error("failed to create token", "error", err, "endpoint", "/api/user/set")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -100,7 +103,7 @@ func getUserInfo(c *gin.Context) {
 	// get user information from db
 	userID, exists := c.Get("user_id")
 	if !exists {
-		slog.Error("user id not found in context")
+		slog.Error("user id not found in context", "endpoint", "/api/user/get")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "user id not found in context"})
 		return
 	}
@@ -133,13 +136,13 @@ func deleteUser(c *gin.Context) {
 	// get user id from context
 	userID, exists := c.Get("user_id")
 	if !exists {
-		slog.Error("user id not found in context")
+		slog.Error("user id not found in context", "endpoint", "/api/user/delete")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "user id not found in context"})
 		return
 	}
 	// delete user from db
 	if err := queries.DeleteUser(c.Request.Context(), userID.(int64)); err != nil {
-		slog.Error("failed to delete user", "error", err)
+		slog.Error("failed to delete user", "error", err, "endpoint", "/api/user/delete")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -151,13 +154,13 @@ func updateUser(c *gin.Context) {
 	queries := database.New(db)
 	userID, exists := c.Get("user_id")
 	if !exists {
-		slog.Error("user id not found in context")
+		slog.Error("user id not found in context", "endpoint", "/api/user/update")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "user id not found in context"})
 		return
 	}
 	user, err := queries.GetUserById(c.Request.Context(), userID.(int64))
 	if err != nil {
-		slog.Error("failed to get user", "error", err)
+		slog.Error("failed to get user", "error", err, "endpoint", "/api/user/update")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -166,7 +169,7 @@ func updateUser(c *gin.Context) {
 	var updateParams database.UpdateUserParams
 	// get update params from request body
 	if err := c.BindJSON(&updateParams); err != nil {
-		slog.Error("failed to bind update params", "error", err)
+		slog.Error("failed to bind update params", "error", err, "endpoint", "/api/user/update")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -174,7 +177,7 @@ func updateUser(c *gin.Context) {
 	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(updateParams.Password)); err != nil {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(updateParams.Password), bcrypt.DefaultCost)
 		if err != nil {
-			slog.Error("failed to generate password hash for new password", "error", err)
+			slog.Error("failed to generate password hash for new password", "error", err, "endpoint", "/api/user/update")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -188,4 +191,42 @@ func updateUser(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "user updated", "user": user})
+}
+
+func getLinkToken(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		slog.Error("user id not found in context", "endpoint", "/api/user/link-token")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user id not found in context"})
+		return
+	}
+	plaidClient := utils.GetPlaidClient()
+	config := utils.GetConfig()
+	
+	user := plaid.NewLinkTokenCreateRequestUser(fmt.Sprint(userID))
+	
+	request := plaid.NewLinkTokenCreateRequest(
+		"Purch",
+		"en",
+		config.GetPlaidCountryCodes(),
+	)
+	
+	request.SetUser(*user)
+	request.SetProducts(config.GetPlaidProducts())
+	request.SetRedirectUri(config.PlaidRedirectUri)
+	
+	resp, _, err := plaidClient.PlaidApi.LinkTokenCreate(c.Request.Context()).LinkTokenCreateRequest(*request).Execute()
+	
+	if err != nil {
+		slog.Error("failed to create link token", "error", err, "endpoint", "/api/user/link-token")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, 
+		gin.H{
+			"link_token": resp.GetLinkToken(), 
+			"expires_at": resp.GetExpiration(),
+		},
+	)
 }

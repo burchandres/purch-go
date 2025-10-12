@@ -1,13 +1,20 @@
 package utils
 
 import (
+	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
-	"strings"
-	"log/slog"
-	"fmt"
-	
+	// "strings"
+	"sync"
+
 	"github.com/joho/godotenv"
+	"github.com/plaid/plaid-go/v40/plaid"
+)
+
+var (
+	cfg *Config
+	once sync.Once
 )
 
 const (
@@ -36,10 +43,27 @@ type Config struct {
 	PlaidProducts       string
 	PlaidCountryCodes   string
 	PlaidLanguage       string
+	PlaidRedirectUri    string
 }
 
-func (c *Config) GetPlaidProducts() []string {
-	return strings.Split(c.PlaidProducts, ",")
+func (c *Config) GetPlaidCountryCodes() []plaid.CountryCode {
+	// countryCodes := strings.Split(c.PlaidCountryCodes, ",")
+	// var codes []plaid.CountryCode
+	// for _, code := range countryCodes {
+	// 	codes = append(codes, plaid.CountryCode(code))
+	// }
+	// return codes
+	return []plaid.CountryCode{plaid.COUNTRYCODE_US}
+}
+
+func (c *Config) GetPlaidProducts() []plaid.Products {
+	// plaidProducts := strings.Split(c.PlaidProducts, ",")
+	// var products []plaid.Products
+	// for _, product := range plaidProducts {
+	// 	products = append(products, plaid.Products(product))
+	// }
+	// return products
+	return []plaid.Products{plaid.PRODUCTS_AUTH, plaid.PRODUCTS_TRANSACTIONS}
 }
 
 func (c *Config) GetPostgresURL() string {
@@ -53,14 +77,19 @@ func (c *Config) GetPostgresURL() string {
 	)
 }
 
-func LoadConfig() (*Config, error) {
+func GetConfig() *Config {
+	once.Do(func() {
+		cfg = loadConfig()
+	})
+	return cfg
+}
+
+func loadConfig() *Config {
 	// should be developing against docker deployment
-	if err := godotenv.Load("/run/secrets/env"); err != nil {
-		// if not check for a .env file in the current directory
-		if err := godotenv.Load(".env"); err != nil {
-			return nil, err
-		}
-	}
+	// but also pull from .env file if it exists
+	// don't panic if nothing exists stuff will just break
+	_ = godotenv.Load("/run/secrets/env")
+	_ = godotenv.Load(".env")
 
 	config := &Config{
 		LogLevel:            getEnvVar("LOG_LEVEL", "INFO"),
@@ -77,9 +106,10 @@ func LoadConfig() (*Config, error) {
 		PlaidProducts:       getEnvVar("PLAID_PRODUCTS", "auth,transactions"),
 		PlaidCountryCodes:   getEnvVar("PLAID_COUNTRY_CODES", "US"),
 		PlaidLanguage:       getEnvVar("PLAID_LANGUAGE", "en"),
+		PlaidRedirectUri:    getEnvVar("PLAID_REDIRECT_URI", "http://localhost:5173/dashboard"),
 	}
 
-	return config, nil
+	return config
 }
 
 func getEnvVar[T string | int | bool | float64](key string, defaultValue T) T {

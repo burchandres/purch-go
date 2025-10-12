@@ -18,16 +18,12 @@ import (
 
 func main() {
 	// get service configurations
-	config, err := utils.LoadConfig()
-	if err != nil {
-		slog.Error("failed to load config", "error", err)
-		panic(err)
-	}
+	config := utils.GetConfig()
 	slog.Info("loaded config", "config", config)
 	// get API server
 	server := getServer()
 	// setup database connection pool
-	if err = database.Init(config.GetPostgresURL()); err != nil {
+	if err := database.Init(config.GetPostgresURL()); err != nil {
 		slog.Error("failed to initialize database pool", "error", err)
 		panic(err)
 	}
