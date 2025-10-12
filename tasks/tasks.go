@@ -29,11 +29,11 @@ func StoreItemAccountsTransactionsPipeline(
 	itemID string,
 	accessToken string,
 ) error {
-	if err := StoreItem(ctx, userID, itemID, accessToken); err != nil {
+	if err := SyncItem(ctx, userID, itemID, accessToken); err != nil {
 		slog.Error("error storing item in item->accounts->transactions intial sync pipeline", "error", err.Error())
 		return err
 	}
-	if err := StoreAccounts(ctx, itemID, accessToken); err != nil {
+	if err := SyncAccounts(ctx, itemID, accessToken); err != nil {
 		slog.Error("error storing accounts in item->accounts->transactions initial sync pipeline", "error", err.Error())
 		return err
 	}
@@ -45,7 +45,7 @@ func StoreItemAccountsTransactionsPipeline(
 	return nil
 }
 
-func StoreItem(
+func SyncItem(
 	ctx context.Context, 
 	userID int64, 
 	itemID string, 
@@ -80,7 +80,7 @@ func StoreItem(
 	return nil
 }
 
-func StoreAccounts(
+func SyncAccounts(
 	ctx context.Context,
 	itemID string,
 	accessToken string,
