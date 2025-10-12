@@ -1,15 +1,16 @@
 package api
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
-	"fmt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/plaid/plaid-go/v40/plaid"
 	"golang.org/x/crypto/bcrypt"
 
 	"purch/database"
+	"purch/tasks"
 	"purch/utils"
 )
 
@@ -256,35 +257,34 @@ func exchangePublicToken(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	accessToken, ok := resp.GetAccessTokenOk()
+	if !ok {
+		slog.Error("no access token present after exchanging with public token")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "no access token provided"})
+		return
+	}
+
+	itemID, ok := resp.GetItemIdOk()
+	if !ok {
+		slog.Error("no item ID present after getting access token")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "no item ID present after getting access token"})
+		return
+	}
 	
+	// in separate goroutine run item->accounts->transactions pipeline
 	go func() {
-		db := database.GetPool()
-		queries := database.New(db)
-		slog.Info("pulling item related info to store")
-		// pull item related info to store
-		accessToken := resp.GetAccessToken()
-		itemID := resp.GetItemId()
-		// create item get request
-		request := plaid.NewItemGetRequest(accessToken)
-		// execute item get request
-		resp, _, err := plaidClient.PlaidApi.ItemGet(c.Request.Context()).ItemGetRequest(*request).Execute()
-		if err != nil {
-			slog.Error("failed to get item", "error", err, "endpoint", "/api/user/exchange-public-token")
-			return
-		}
-		item := resp.GetItem()
-		// store item info
-		var storeItemParams database.StoreItemParams
-		storeItemParams.ID = itemID
-		storeItemParams.AccessToken = accessToken
-		storeItemParams.UserID = userID.(int64)
-		storeItemParams.Name = item.GetInstitutionName()
-		_, err = queries.StoreItem(c.Request.Context(), storeItemParams)
-		if err != nil {
-			slog.Error("failed to store item", "error", err, "endpoint", "/api/user/exchange-public-token")
-			return
+		if err := tasks.StoreItemAccountsTransactionsPipeline(
+			c.Request.Context(),
+			userID.(int64),
+			*itemID,
+			*accessToken,
+		); err != nil {
+			slog.Error("error with item->accounts->transactions initial sync pipeline", "error", err.Error())
+		} else {
+			slog.Info("successfully synced all accounts and transactions", "itemID", *itemID, "userID", userID)
 		}
 	}()
 	
-	c.JSON(http.StatusOK, gin.H{"message": "success"})
+	c.JSON(http.StatusOK, gin.H{"message": "Bank linked with Purch, syncing information..."})
 }
