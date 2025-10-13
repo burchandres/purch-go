@@ -73,7 +73,7 @@ func (q *Queries) GetAccount(ctx context.Context, id string) (Account, error) {
 }
 
 const getAccountTransactions = `-- name: GetAccountTransactions :one
-SELECT t.id, t.account_id, t.category_id, t.authorized_date, t.settled_date, t.merchant, t.amount, t.currency_code, t.pending
+SELECT t.id, t.account_id, t.category_label, t.authorized_date, t.settled_date, t.merchant, t.amount, t.currency_code, t.pending
 FROM transactions t
 JOIN accounts a ON t.account_id = a.id
 `
@@ -84,7 +84,7 @@ func (q *Queries) GetAccountTransactions(ctx context.Context) (Transaction, erro
 	err := row.Scan(
 		&i.ID,
 		&i.AccountID,
-		&i.CategoryID,
+		&i.CategoryLabel,
 		&i.AuthorizedDate,
 		&i.SettledDate,
 		&i.Merchant,
@@ -166,7 +166,7 @@ func (q *Queries) GetItemAccounts(ctx context.Context, itemID string) ([]Account
 
 const getTransaction = `-- name: GetTransaction :one
 
-SELECT id, account_id, category_id, authorized_date, settled_date, merchant, amount, currency_code, pending FROM transactions
+SELECT id, account_id, category_label, authorized_date, settled_date, merchant, amount, currency_code, pending FROM transactions
 WHERE id = $1
 `
 
@@ -179,7 +179,7 @@ func (q *Queries) GetTransaction(ctx context.Context, id string) (Transaction, e
 	err := row.Scan(
 		&i.ID,
 		&i.AccountID,
-		&i.CategoryID,
+		&i.CategoryLabel,
 		&i.AuthorizedDate,
 		&i.SettledDate,
 		&i.Merchant,
@@ -324,7 +324,7 @@ func (q *Queries) GetUserItems(ctx context.Context, userID int64) ([]Item, error
 }
 
 const getUserTransactions = `-- name: GetUserTransactions :many
-SELECT t.id, t.account_id, t.category_id, t.authorized_date, t.settled_date, t.merchant, t.amount, t.currency_code, t.pending
+SELECT t.id, t.account_id, t.category_label, t.authorized_date, t.settled_date, t.merchant, t.amount, t.currency_code, t.pending
 FROM items i
 JOIN accounts a ON i.id = a.item_id
 JOIN transactions t ON a.id = t.account_id
@@ -343,7 +343,7 @@ func (q *Queries) GetUserTransactions(ctx context.Context, userID int64) ([]Tran
 		if err := rows.Scan(
 			&i.ID,
 			&i.AccountID,
-			&i.CategoryID,
+			&i.CategoryLabel,
 			&i.AuthorizedDate,
 			&i.SettledDate,
 			&i.Merchant,
@@ -450,7 +450,7 @@ const storeTransaction = `-- name: StoreTransaction :one
 INSERT INTO transactions (
     id,
     account_id,
-    category_id,
+    category_label,
     authorized_date,
     merchant,
     amount,
@@ -459,13 +459,13 @@ INSERT INTO transactions (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8
 )
-RETURNING id, account_id, category_id, authorized_date, settled_date, merchant, amount, currency_code, pending
+RETURNING id, account_id, category_label, authorized_date, settled_date, merchant, amount, currency_code, pending
 `
 
 type StoreTransactionParams struct {
 	ID             string
 	AccountID      string
-	CategoryID     string
+	CategoryLabel     string
 	AuthorizedDate pgtype.Date
 	Merchant       pgtype.Text
 	Amount         pgtype.Numeric
@@ -477,7 +477,7 @@ func (q *Queries) StoreTransaction(ctx context.Context, arg StoreTransactionPara
 	row := q.db.QueryRow(ctx, storeTransaction,
 		arg.ID,
 		arg.AccountID,
-		arg.CategoryID,
+		arg.CategoryLabel,
 		arg.AuthorizedDate,
 		arg.Merchant,
 		arg.Amount,
@@ -488,7 +488,7 @@ func (q *Queries) StoreTransaction(ctx context.Context, arg StoreTransactionPara
 	err := row.Scan(
 		&i.ID,
 		&i.AccountID,
-		&i.CategoryID,
+		&i.CategoryLabel,
 		&i.AuthorizedDate,
 		&i.SettledDate,
 		&i.Merchant,
@@ -623,7 +623,7 @@ UPDATE transactions
     amount = $3,
     pending = $4
 WHERE id = $1
-RETURNING id, account_id, category_id, authorized_date, settled_date, merchant, amount, currency_code, pending
+RETURNING id, account_id, category_label, authorized_date, settled_date, merchant, amount, currency_code, pending
 `
 
 type UpdateTransactionParams struct {
@@ -644,7 +644,7 @@ func (q *Queries) UpdateTransaction(ctx context.Context, arg UpdateTransactionPa
 	err := row.Scan(
 		&i.ID,
 		&i.AccountID,
-		&i.CategoryID,
+		&i.CategoryLabel,
 		&i.AuthorizedDate,
 		&i.SettledDate,
 		&i.Merchant,

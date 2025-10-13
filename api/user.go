@@ -141,6 +141,7 @@ func deleteUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "user id not found in context"})
 		return
 	}
+	// TODO: call `/item/remove` to cancel associated access tokens to prevent unnecessary billing
 	// delete user from db
 	if err := queries.DeleteUser(c.Request.Context(), userID.(int64)); err != nil {
 		slog.Error("failed to delete user", "error", err, "endpoint", "/api/user/delete")
@@ -273,8 +274,9 @@ func exchangePublicToken(c *gin.Context) {
 	}
 	
 	// in separate goroutine run item->accounts->transactions pipeline
+	// and log whether it was successful or not
 	go func() {
-		if err := tasks.StoreItemAccountsTransactionsPipeline(
+		if err := tasks.SyncItemAccountsTransactionsPipeline(
 			c.Request.Context(),
 			userID.(int64),
 			*itemID,

@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS accounts (
 CREATE TABLE IF NOT EXISTS transactions (
     id text UNIQUE,
     account_id text REFERENCES accounts (id) ON DELETE CASCADE,
-    category_id bigint REFERENCES categories (id),
+    -- later on have it reference category_id instead once semantic search is figured out
+    category_label text,
     authorized_date date NOT NULL default current_date,
     settled_date date,
     merchant text,

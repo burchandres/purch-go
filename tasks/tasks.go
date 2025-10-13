@@ -4,12 +4,18 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/plaid/plaid-go/v40/plaid"
 
 	"purch/database"
 	"purch/utils"
+)
+
+const (
+	iso8601TimeFormat = "2006-01-02"
+	unknownCategory = "unknown_category"
 )
 
 var (
@@ -23,7 +29,7 @@ var (
 	ErrStoringTransactions = errors.New("error storing transactions")
 )
 
-func StoreItemAccountsTransactionsPipeline(
+func SyncItemAccountsTransactionsPipeline(
 	ctx context.Context,
 	userID int64,
 	itemID string,
@@ -37,8 +43,7 @@ func StoreItemAccountsTransactionsPipeline(
 		slog.Error("error storing accounts in item->accounts->transactions initial sync pipeline", "error", err.Error())
 		return err
 	}
-	// TODO: finish this function
-	if err := SyncTransactions(ctx, accessToken); err != nil {
+	if err := SyncTransactions(ctx, itemID, accessToken, ""); err != nil {
 		slog.Error("error syncing transactions in item->accounts->transactions initial sync pipeline", "error", err.Error())
 		return err
 	}
@@ -132,7 +137,151 @@ func SyncAccounts(
 // TODO: Finish this function
 func SyncTransactions(
 	ctx context.Context,
+	itemID string,
 	accessToken string,
+	cursor string,
 ) error {
+	plaidClient := utils.GetPlaidClient()
+	db := database.GetPool()
+	// added, modified and removed transactions are all disjoint
+	// so should be fine to sync each in their own goroutines
+	var wg sync.WaitGroup
+
+	// channels to push transactions to for below goroutines to read from for batching
+	addedChan := make(chan []plaid.Transaction)
+	modifiedChan := make(chan []plaid.Transaction)
+	removedChan := make(chan []plaid.RemovedTransaction)
+	errChan := make(chan error)
+
+	// get all newly added transactions and push
+	// TODO: move out to separate helper function that takes addedChan and itemID as input
+	wg.Go(func() {
+		tx, err := db.BeginTx(ctx, pgx.TxOptions{})
+		if err != nil {
+			slog.Error("error beginning db tx for added transactions", "error", err.Error())
+			errChan<-err
+			return
+		}
+		queries := database.New(tx)
+		for transactions := range addedChan {
+			for _, transaction := range transactions {
+				storeTransactionParams := getStoreTransactionParams(transaction)
+				if _, err := queries.StoreTransaction(ctx, storeTransactionParams); err != nil {
+					slog.Error("error storing transaction", "error", err.Error(), "itemID", itemID)
+					errChan<-err
+					tx.Rollback(ctx)
+					return
+				}
+			}
+			tx.Commit(ctx)
+		}
+	})
+
+	// get all modified transactions and update
+	// TODO: move out to separate helper function that takes modifiedChan and itemID as input
+	wg.Go(func() {
+		tx, err := db.BeginTx(ctx, pgx.TxOptions{})
+		if err != nil {
+			slog.Error("error beginning db tx for modified transactions", "error", err.Error())
+			errChan<-err
+			return
+		}
+		queries := database.New(tx)
+		for transactions := range modifiedChan {
+			for _, transaction := range transactions {
+				updateTransactionParams := getUpdateTransactionParams(transaction)
+				if _, err := queries.UpdateTransaction(ctx, updateTransactionParams); err != nil {
+					slog.Error("error updating transaction", "error", err.Error(), "itemID", itemID)
+					errChan<-err
+					tx.Rollback(ctx)
+					return
+				}
+			}
+			tx.Commit(ctx)
+		}
+	})
+
+	// get all deleted transactions and remove
+	// TODO: move out to separate helper function that takes removedChan and itemID as input
+	wg.Go(func() {
+		tx, err := db.BeginTx(ctx, pgx.TxOptions{})
+		if err != nil {
+			slog.Error("error beginning db tx for deleted transactions", "error", err.Error())
+			errChan<-err
+			return
+		}
+		queries := database.New(tx)
+		for transactions := range removedChan {
+			for _, transaction := range transactions {
+				transactionID := transaction.GetTransactionId()
+				if err := queries.DeleteTransaction(ctx, transactionID); err != nil {
+					slog.Error("error deleting transaction", "error", err.Error(), "itemID", itemID, "transactionID", transactionID)
+					errChan<-err
+					tx.Rollback(ctx)
+					return
+				}
+			}
+			tx.Commit(ctx)
+		}
+	})
+	// loop through until there are no more transactions according to plaid
+	hasMore := true
+	for hasMore {
+		// TODO: move all this to helper function as well
+		// create TransactionsSyncRequest
+		transactionsSyncRequest := plaid.NewTransactionsSyncRequest(accessToken)
+		transactionsSyncRequest.SetCursor(cursor)
+		// execute TransactionsSyncRequest
+		transactionsSyncResp, _, err := plaidClient.PlaidApi.TransactionsSync(ctx).TransactionsSyncRequest(*transactionsSyncRequest).Execute()
+		if err != nil {
+			slog.Error("error pulling transactions", "itemID", itemID)
+			return ErrRequestingTransactions
+		}
+		// update hasMore and cursor
+		hasMore = transactionsSyncResp.GetHasMore()
+		cursor = transactionsSyncResp.GetNextCursor()
+		// push to addedChan for processing
+		added := transactionsSyncResp.GetAdded()
+		if len(added) == 0 {
+			close(addedChan)
+		} else {
+			addedChan <- added
+		}
+		// push to modifiedChan for processing
+		modified := transactionsSyncResp.GetModified()
+		if len(modified) == 0 {
+			close(modifiedChan)
+		} else {
+			modifiedChan <- modified
+		}
+		// push to removedChan for processing
+		removed := transactionsSyncResp.GetRemoved()
+		if len(removed) == 0 {
+			close(removedChan)
+		} else {
+			removedChan <- removed
+		}
+		if !hasMore {
+			close(addedChan)
+			close(modifiedChan)
+			close(removedChan)
+		}
+	}
+	// wait for all transaction syncing to finish
+	wg.Wait()
 	return nil
+}
+
+func getStoreTransactionParams(transaction plaid.Transaction) database.StoreTransactionParams {
+	// TODO: finish this function
+	// use this link: https://github.com/plaid/plaid-go/blob/master/plaid/model_transaction.go
+	// and this link: https://plaid.com/docs/api/products/transactions/#transactionssync
+	return database.StoreTransactionParams{}
+}
+
+func getUpdateTransactionParams(transaction plaid.Transaction) database.UpdateTransactionParams {
+	// TODO: finsh this function
+	// use this link: https://github.com/plaid/plaid-go/blob/master/plaid/model_transaction.go
+	// and this link: https://plaid.com/docs/api/products/transactions/#transactionssync
+	return database.UpdateTransactionParams{}
 }

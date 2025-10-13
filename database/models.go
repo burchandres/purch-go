@@ -33,7 +33,7 @@ type Item struct {
 type Transaction struct {
 	ID             string
 	AccountID      string
-	CategoryID     string
+	CategoryLabel     string
 	AuthorizedDate pgtype.Date
 	SettledDate    pgtype.Date
 	Merchant       pgtype.Text
