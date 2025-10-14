@@ -334,6 +334,7 @@ func getStoreTransactionParams(transaction plaid.Transaction) database.StoreTran
 	// TODO: read error from this later
 	amount.Scan(transaction.GetAmount())
 	storeTransactionParams.Amount = amount
+	
 	storeTransactionParams.CurrencyCode = pgtype.Text{String: transaction.GetIsoCurrencyCode(), Valid: true}
 	storeTransactionParams.Pending = transaction.GetPending()
 
