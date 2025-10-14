@@ -200,6 +200,8 @@ func SyncTransactions(
 	closeChannels(addedChan, modifiedChan, removedChan)
 	wg.Wait()
 	close(errChan)
+	// to prevent any leaks
+	cancel()
 	
 	// push cursor to item
 	go func() {
@@ -231,41 +233,47 @@ func gatherTransactionsForProcessing(
 	removedChan chan []plaid.RemovedTransaction,
 	errChan chan error,
 ) (bool, string, error) {
-	plaidClient := utils.GetPlaidClient()
-	// create TransactionsSyncRequest
-	transactionsSyncRequest := plaid.NewTransactionsSyncRequest(accessToken)
-	transactionsSyncRequest.SetCursor(cursor)
-	// execute TransactionsSyncRequest
-	transactionsSyncResp, _, err := plaidClient.PlaidApi.TransactionsSync(ctx).TransactionsSyncRequest(*transactionsSyncRequest).Execute()
-	if err != nil {
-		slog.Error("error pulling transactions", "itemID", itemID)
-		return false, cursor, ErrRequestingTransactions
+	select {
+	case err := <-errChan:
+		slog.Error("error received from transaction sync process", "error", err.Error(), "itemID", itemID)
+		return false, cursor, err
+	default:
+		plaidClient := utils.GetPlaidClient()
+		// create TransactionsSyncRequest
+		transactionsSyncRequest := plaid.NewTransactionsSyncRequest(accessToken)
+		transactionsSyncRequest.SetCursor(cursor)
+		// execute TransactionsSyncRequest
+		transactionsSyncResp, _, err := plaidClient.PlaidApi.TransactionsSync(ctx).TransactionsSyncRequest(*transactionsSyncRequest).Execute()
+		if err != nil {
+			slog.Error("error pulling transactions", "itemID", itemID)
+			return false, cursor, ErrRequestingTransactions
+		}
+		// update hasMore and transaction cursor
+		hasMore := transactionsSyncResp.GetHasMore()
+		nextCursor := transactionsSyncResp.GetNextCursor()
+		// push to addedChan for processing
+		added := transactionsSyncResp.GetAdded()
+		if len(added) == 0 {
+			close(addedChan)
+		} else {
+			addedChan <- added
+		}
+		// push to modifiedChan for processing
+		modified := transactionsSyncResp.GetModified()
+		if len(modified) == 0 {
+			close(modifiedChan)
+		} else {
+			modifiedChan <- modified
+		}
+		// push to removedChan for processing
+		removed := transactionsSyncResp.GetRemoved()
+		if len(removed) == 0 {
+			close(removedChan)
+		} else {
+			removedChan <- removed
+		}
+		return hasMore, nextCursor, nil
 	}
-	// update hasMore and transaction cursor
-	hasMore := transactionsSyncResp.GetHasMore()
-	nextCursor := transactionsSyncResp.GetNextCursor()
-	// push to addedChan for processing
-	added := transactionsSyncResp.GetAdded()
-	if len(added) == 0 {
-		close(addedChan)
-	} else {
-		addedChan <- added
-	}
-	// push to modifiedChan for processing
-	modified := transactionsSyncResp.GetModified()
-	if len(modified) == 0 {
-		close(modifiedChan)
-	} else {
-		modifiedChan <- modified
-	}
-	// push to removedChan for processing
-	removed := transactionsSyncResp.GetRemoved()
-	if len(removed) == 0 {
-		close(removedChan)
-	} else {
-		removedChan <- removed
-	}
-	return hasMore, nextCursor, nil
 }
 
 func processAddedTransactions(

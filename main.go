@@ -58,6 +58,7 @@ func getServer() *http.Server {
 	})
 
 	api.SetupUserEndpoints(router)
+	api.SetupBudgetEndpoints(router)
 	
 	return &http.Server{
 		Addr: ":8080",

@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func setupBudgetEndpoints(router *gin.Engine) {
+func SetupBudgetEndpoints(router *gin.Engine) {
 	protected := router.Group("/budget")
 	protected.Use(authMiddleware())
 	{
