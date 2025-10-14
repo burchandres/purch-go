@@ -22,12 +22,12 @@ func SetupUserEndpoints(r *gin.Engine) {
 	protected.Use(authMiddleware())
 	{
 		protected.GET("/info", getUserInfo)
-		// protected.GET("/verify-auth", verifyAuth)
 		protected.GET("/logout", logout)
 		protected.POST("/update", updateUser)
 		protected.GET("/link-token", getLinkToken)
 		protected.POST("/exchange-public-token", exchangePublicToken)
 		protected.DELETE("/delete", deleteUser)
+		// protected.GET("/verify-auth", verifyAuth)
 	}
 }
 
