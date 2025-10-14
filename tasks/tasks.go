@@ -171,11 +171,11 @@ func SyncTransactions(
 	var err error
 	var nextCursor string
 	hasMore := true
-	for hasMore {
+	HasMore: for hasMore {
 		select {
 		case <-ctx.Done():
 			cancel()
-			break
+			break HasMore
 		default:
 			hasMore, nextCursor, err = gatherTransactionsForProcessing(
 				ctx, 
@@ -191,7 +191,7 @@ func SyncTransactions(
 				errChan <- err
 				closeChannels(addedChan, modifiedChan, removedChan)
 				cancel()
-				break
+				break HasMore
 			}
 			cursor = nextCursor
 		}
