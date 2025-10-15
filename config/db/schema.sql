@@ -50,5 +50,5 @@ CREATE TABLE IF NOT EXISTS transactions (
     currency_code text,
     pending bool NOT NULL DEFAULT false,
 
-    PRIMARY KEY (id, account_id, category_id)
+    PRIMARY KEY (id, account_id)
 );
