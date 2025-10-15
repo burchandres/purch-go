@@ -53,7 +53,6 @@ func parseToken(tokenString string) (*Claims, error) {
 		}
 		return secretKey, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +85,16 @@ func authMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Store claims in context for use in handlers
-		c.Set("claims", claims)
+		// Check if token expires soon (e.g., within 10 minutes) and refresh it automatically
+        if time.Until(claims.ExpiresAt.Time) < 10*time.Minute {
+            newToken, err := createToken(claims.UserID)
+            if err == nil {
+                c.SetCookie("purch_token", newToken, 3600, "/", "localhost", false, true)
+                c.Header("X-Token-Refreshed", "true") // Optional: signal to frontend
+            }
+        }
+		
+		// Store userID in context for use in handlers
 		c.Set("user_id", claims.UserID)
 		slog.Info("user authenticated and user_id context set", "user_id", claims.UserID)
 		
