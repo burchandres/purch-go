@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -113,7 +112,7 @@ func getUserInfo(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "user id not found in context"})
 		return
 	}
-	user, err := queries.GetUserById(c.Request.Context(), userID.(int64))
+	user, err := queries.GetUserById(c.Request.Context(), userID.(string))
 	if err != nil {
 		slog.Error("failed to get user", "error", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -148,7 +147,7 @@ func deleteUser(c *gin.Context) {
 	}
 	// TODO: call `/item/remove` to cancel associated access tokens to prevent unnecessary billing
 	// delete user from db
-	if err := queries.DeleteUser(c.Request.Context(), userID.(int64)); err != nil {
+	if err := queries.DeleteUser(c.Request.Context(), userID.(string)); err != nil {
 		slog.Error("failed to delete user", "error", err, "endpoint", "/api/user/delete")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -165,7 +164,7 @@ func updateUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "user id not found in context"})
 		return
 	}
-	user, err := queries.GetUserById(c.Request.Context(), userID.(int64))
+	user, err := queries.GetUserById(c.Request.Context(), userID.(string))
 	if err != nil {
 		slog.Error("failed to get user", "error", err, "endpoint", "/api/user/update")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -210,7 +209,7 @@ func getLinkToken(c *gin.Context) {
 	plaidClient := utils.GetPlaidClient()
 	config := utils.GetConfig()
 	
-	user := plaid.NewLinkTokenCreateRequestUser(fmt.Sprint(userID))
+	user := plaid.NewLinkTokenCreateRequestUser(userID.(string))
 	
 	request := plaid.NewLinkTokenCreateRequest(
 		"Purch",
@@ -283,7 +282,7 @@ func exchangePublicToken(c *gin.Context) {
 	go func() {
 		if err := tasks.SyncItemAccountsTransactionsPipeline(
 			c.Request.Context(),
-			userID.(int64),
+			userID.(string),
 			*itemID,
 			*accessToken,
 		); err != nil {

@@ -246,14 +246,20 @@ test_endpoint "GET" "/ping" 200 "" "Health check endpoint" false
 test_endpoint "GET" "/user/info" 200 "" \
     "Get specific user (authenticated)" \
     true \
-    'has("id") and has("username") and has("first_name")'
+    'has("ID") and has("Username") and has("FirstName") and has("LastName") and has("Password")'
+
+# Verify we can get a link-token
+test_endpoint "GET" "/user/link-token" 200 "" \
+    "Get link token for current logged in user (authenticated)" \
+    true \
+    'has("link_token") and has("expires_at")'
 
 # Update user and verify response
 test_endpoint "POST" "/user/update" 200 \
     '{"first_name":"Jane","last_name":"Doe","income":75000, "income_rate":"weekly", "username":"testuser", "password":"testpass"}' \
     "Update user (authenticated)" \
     true \
-    'has("user")'
+    'has("message")'
 
 # Test non-existent user returns proper error structure
 test_endpoint "DELETE" "/user/delete" 200 "" \

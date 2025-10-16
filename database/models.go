@@ -16,7 +16,7 @@ type Account struct {
 
 type Category struct {
 	ID                string
-	UserID            int64
+	UserID            string
 	Label             string
 	CurrentSpending   pgtype.Numeric
 	AllocatedSpending pgtype.Numeric
@@ -24,7 +24,7 @@ type Category struct {
 
 type Item struct {
 	ID                string
-	UserID            int64
+	UserID            string
 	AccessToken       string
 	Name              string
 	TransactionCursor string

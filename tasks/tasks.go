@@ -33,7 +33,7 @@ var (
 
 func SyncItemAccountsTransactionsPipeline(
 	ctx context.Context,
-	userID int64,
+	userID string,
 	itemID string,
 	accessToken string,
 ) error {
@@ -54,7 +54,7 @@ func SyncItemAccountsTransactionsPipeline(
 
 func SyncItem(
 	ctx context.Context, 
-	userID int64, 
+	userID string, 
 	itemID string, 
 	accessToken string,
 ) error {
