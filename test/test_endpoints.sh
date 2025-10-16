@@ -252,7 +252,7 @@ test_endpoint "GET" "/user/info" 200 "" \
 test_endpoint "GET" "/user/link-token" 200 "" \
     "Get link token for current logged in user (authenticated)" \
     true \
-    'has("link_token") and has("expires_at")'
+    'has("LinkToken") and has("ExpiresAt")'
 
 # Update user and verify response
 test_endpoint "POST" "/user/update" 200 \
