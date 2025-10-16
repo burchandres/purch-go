@@ -16,12 +16,12 @@ var secretKey = []byte(os.Getenv("SECRET_KEY"))
 
 // Claims represents the JWT claims
 type Claims struct {
-	UserID   int64       `json:"user_id"`
+	UserID               string       `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
 // CreateToken generates a JWT token and returns it as a string
-func createToken(userID int64) (string, error) {
+func createToken(userID string) (string, error) {
 	issuedAt := time.Now()
 	expiresAt := time.Now().Add(30 * time.Minute)
 

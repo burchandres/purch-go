@@ -27,7 +27,6 @@ func SetupUserEndpoints(r *gin.Engine) {
 		protected.GET("/link-token", getLinkToken)
 		protected.POST("/exchange-public-token", exchangePublicToken)
 		protected.DELETE("/delete", deleteUser)
-		// protected.GET("/verify-auth", verifyAuth)
 	}
 }
 
@@ -39,6 +38,12 @@ func registerUser(c *gin.Context) {
 
 	if err := c.BindJSON(&storeUserParams); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	// verify user doesn't already exist
+	_, err := queries.GetUserByUsername(c.Request.Context(), storeUserParams.Username)
+	if err == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "user with this username already exists"})
 		return
 	}
 	// hash the password before pushing to postgres

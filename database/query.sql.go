@@ -668,7 +668,7 @@ RETURNING id, first_name, last_name, username, password, income, income_rate
 `
 
 type UpdateUserParams struct {
-	ID         int64
+	ID         string
 	FirstName  string
 	LastName   string
 	Username   string

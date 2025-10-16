@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS users (
-    id bigserial UNIQUE,
+    id text UNIQUE DEFAULT gen_random_uuid(),
     first_name text NOT NULL,
     last_name text NOT NULL,
     username text UNIQUE NOT NULL,
@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS categories (
-    id bigserial UNIQUE,
-    user_id bigint REFERENCES users (id) ON DELETE CASCADE,
+    id text UNIQUE DEFAULT gen_random_uuid(),
+    user_id text REFERENCES users (id) ON DELETE CASCADE,
     label text NOT NULL,
     current_spending numeric NOT NULL DEFAULT 0,
     allocated_spending numeric NOT NULL CHECK (allocated_spending > 0),
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS categories (
 
 CREATE TABLE IF NOT EXISTS items (
     id text UNIQUE,
-    user_id bigint REFERENCES users (id) ON DELETE CASCADE,
+    user_id text REFERENCES users (id) ON DELETE CASCADE,
     access_token text NOT NULL,
     name text NOT NULL,
     transaction_cursor text NOT NULL default '',
