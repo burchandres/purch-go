@@ -261,9 +261,15 @@ test_endpoint "POST" "/user/update" 200 \
     true \
     'has("message")'
 
-# Test non-existent user returns proper error structure
+# Test deleting user returns works and returns message
 test_endpoint "DELETE" "/user/delete" 200 "" \
     "Delete current user (authenticated)" \
+    true \
+    'has("message")'
+    
+# Test logging out
+test_endpoint "GET" "/user/logout" 200 "" \
+    "Logout and delete current cookie (authenticated)" \
     true \
     'has("message")'
 
