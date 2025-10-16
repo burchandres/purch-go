@@ -231,8 +231,8 @@ func getLinkToken(c *gin.Context) {
 	
 	c.JSON(http.StatusOK, 
 		gin.H{
-			"link_token": resp.GetLinkToken(), 
-			"expires_at": resp.GetExpiration(),
+			"LinkToken": resp.GetLinkToken(), 
+			"ExpiresAt": resp.GetExpiration(),
 		},
 	)
 }
