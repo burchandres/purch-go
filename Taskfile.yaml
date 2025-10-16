@@ -31,6 +31,14 @@ tasks:
     cmds:
       - golangci-lint run
       
-  test-endpoints:
+  test-unit-test:
+    aliases:
+      - test-unit
     cmds:
-      - ./test/test_endpoints.sh
+      - ./test/unit_test_endpoints.sh
+      
+  test-integration-test:
+    aliases:
+      - test-integration
+    cmds:
+      - ./.test/integration_test_endpoints.sh
