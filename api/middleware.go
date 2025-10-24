@@ -2,10 +2,10 @@ package api
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
-	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -16,17 +16,17 @@ var secretKey = []byte(os.Getenv("SECRET_KEY"))
 
 // Claims represents the JWT claims
 type Claims struct {
-	UserID   int64       `json:"user_id"`
+	UserID string `json:"user_id"`
 	jwt.RegisteredClaims
 }
 
 // CreateToken generates a JWT token and returns it as a string
-func createToken(userID int64) (string, error) {
+func createToken(userID string) (string, error) {
 	issuedAt := time.Now()
 	expiresAt := time.Now().Add(30 * time.Minute)
 
 	claims := &Claims{
-		UserID:   userID,
+		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(issuedAt),
@@ -86,18 +86,18 @@ func authMiddleware() gin.HandlerFunc {
 		}
 
 		// Check if token expires soon (e.g., within 10 minutes) and refresh it automatically
-        if time.Until(claims.ExpiresAt.Time) < 10*time.Minute {
-            newToken, err := createToken(claims.UserID)
-            if err == nil {
-                c.SetCookie("purch_token", newToken, 3600, "/", "localhost", false, true)
-                c.Header("X-Token-Refreshed", "true") // Optional: signal to frontend
-            }
-        }
-		
+		if time.Until(claims.ExpiresAt.Time) < 10*time.Minute {
+			newToken, err := createToken(claims.UserID)
+			if err == nil {
+				c.SetCookie("purch_token", newToken, 3600, "/", "localhost", false, true)
+				c.Header("X-Token-Refreshed", "true") // Optional: signal to frontend
+			}
+		}
+
 		// Store userID in context for use in handlers
-		c.Set("user_id", claims.UserID)
-		slog.Info("user authenticated and user_id context set", "user_id", claims.UserID)
-		
+		c.Set("userID", claims.UserID)
+		slog.Debug("user authenticated and userID context set.", "userID", claims.UserID, "endpoint", c.Request.URL)
+
 		c.Next()
 	}
 }

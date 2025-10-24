@@ -51,7 +51,7 @@ const deleteUser = `-- name: DeleteUser :exec
 DELETE FROM users WHERE id = $1
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
+func (q *Queries) DeleteUser(ctx context.Context, id string) error {
 	_, err := q.db.Exec(ctx, deleteUser, id)
 	return err
 }
@@ -226,7 +226,7 @@ WHERE id = $1 LIMIT 1
 // ---------------------
 // User related queries
 // ---------------------
-func (q *Queries) GetUserById(ctx context.Context, id int64) (User, error) {
+func (q *Queries) GetUserById(ctx context.Context, id string) (User, error) {
 	row := q.db.QueryRow(ctx, getUserById, id)
 	var i User
 	err := row.Scan(
@@ -427,9 +427,9 @@ RETURNING id, user_id, access_token, name, transaction_cursor
 `
 
 type StoreItemParams struct {
-	ID              string
-	UserID          int64
-	AccessToken     string
+	ID          string
+	UserID      string
+	AccessToken string
 	Name        string
 }
 
@@ -465,7 +465,7 @@ RETURNING id, account_id, category_label, authorized_date, settled_date, merchan
 type StoreTransactionParams struct {
 	ID             string
 	AccountID      string
-	CategoryLabel     string
+	CategoryLabel  string
 	AuthorizedDate pgtype.Date
 	Merchant       pgtype.Text
 	Amount         pgtype.Numeric
@@ -668,7 +668,7 @@ RETURNING id, first_name, last_name, username, password, income, income_rate
 `
 
 type UpdateUserParams struct {
-	ID         int64
+	ID         string
 	FirstName  string
 	LastName   string
 	Username   string

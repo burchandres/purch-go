@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	cfg *Config
+	cfg  *Config
 	once sync.Once
 )
 
@@ -26,24 +26,24 @@ const (
 
 type Config struct {
 	// General settings
-	LogLevel     		string
+	LogLevel string
 	// Database settings
-	PostgresHost        string
-	PostgresPort        int
-	PostgresUser        string
-	PostgresPassword    string
-	PostgresDatabase    string
+	PostgresHost     string
+	PostgresPort     int
+	PostgresUser     string
+	PostgresPassword string
+	PostgresDatabase string
 	// Encryption settings
 	SecretKey           string
 	EncryptionAlgorithm string
 	// Plaid settings
-	PlaidClientID       string
-	PlaidSecret         string
-	PlaidEnv            string
-	PlaidProducts       string
-	PlaidCountryCodes   string
-	PlaidLanguage       string
-	PlaidRedirectUri    string
+	PlaidClientID     string
+	PlaidSecret       string
+	PlaidEnv          string
+	PlaidProducts     string
+	PlaidCountryCodes string
+	PlaidLanguage     string
+	PlaidRedirectUri  string
 }
 
 func (c *Config) GetPlaidCountryCodes() []plaid.CountryCode {
@@ -68,11 +68,11 @@ func (c *Config) GetPlaidProducts() []plaid.Products {
 
 func (c *Config) GetPostgresURL() string {
 	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s", 
-		c.PostgresUser, 
-		c.PostgresPassword, 
-		c.PostgresHost, 
-		c.PostgresPort, 
+		"postgres://%s:%s@%s:%d/%s",
+		c.PostgresUser,
+		c.PostgresPassword,
+		c.PostgresHost,
+		c.PostgresPort,
 		c.PostgresDatabase,
 	)
 }
@@ -117,10 +117,10 @@ func getEnvVar[T string | int | bool | float64](key string, defaultValue T) T {
 	if value == "" {
 		return defaultValue
 	}
-	
+
 	var result any
 	var err error
-	
+
 	switch any(defaultValue).(type) {
 	case string:
 		result = value
@@ -131,11 +131,11 @@ func getEnvVar[T string | int | bool | float64](key string, defaultValue T) T {
 	case float64:
 		result, err = strconv.ParseFloat(value, 64)
 	}
-	
+
 	if err != nil {
 		slog.Error("Error parsing %s: %v", key, err)
 		return defaultValue
 	}
-	
+
 	return result.(T)
 }

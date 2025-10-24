@@ -15,4 +15,3 @@ func SetupBudgetEndpoints(router *gin.Engine) {
 		// protected.GET("/category", getCategory)
 	}
 }
-

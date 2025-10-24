@@ -52,3 +52,13 @@ CREATE TABLE IF NOT EXISTS transactions (
 
     PRIMARY KEY (id, account_id)
 );
+
+-- initialiaze the db with a test user 
+INSERT INTO users (
+    first_name,
+    last_name,
+    username,
+    password,
+    income,
+    income_rate
+) VALUES ('test', 'user', 'test_user', 'test_pass', 1000, 'weekly');

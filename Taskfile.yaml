@@ -1,9 +1,7 @@
 version: '3'
 
 tasks:
-  #####################
-  # Docker commands
-  #####################
+  # ------- Docker commands -------
   build:
     cmds:
       - docker compose build
@@ -24,6 +22,27 @@ tasks:
     cmds:
       - docker compose -f docker-compose.yml up {{.CLI_ARGS}} -d
       
+  # ------- Lint -------
   lint:
     cmds:
-      - golangci-lint run
+      - golangci-lint run ./...
+
+  format:
+    cmds:
+      - go fmt ./...
+  
+  vet:
+    cmds:
+      - go vet ./...
+
+  nag:
+    cmds:
+      - task: format
+      - task: vet
+
+  # ------- Test ------- 
+  test:
+    aliases:
+      - test-unit
+    cmds:
+      - ./test/test_endpoints.sh
