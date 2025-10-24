@@ -255,11 +255,11 @@ test_endpoint "GET" "/user/link-token" 200 "" \
     'has("LinkToken") and has("ExpiresAt")'
 
 # Update user and verify response
-test_endpoint "POST" "/user/update" 200 \
-    '{"first_name":"Jane","last_name":"Doe","income":75000, "income_rate":"weekly", "username":"testuser", "password":"testpass"}' \
+test_endpoint "PUT" "/user/update" 200 \
+    '{"first_name":"Jane","last_name":"Doe","income":75000, "income_rate":"weekly", "username":"othertestuser", "password":"testpass"}' \
     "Update user (authenticated)" \
     true \
-    'has("message")'
+    'has("message") and has("user")'
 
 # Test deleting user returns works and returns message
 test_endpoint "DELETE" "/user/delete" 200 "" \
