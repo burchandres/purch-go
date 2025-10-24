@@ -155,7 +155,7 @@ func updateUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	// get update params
 	var updateParams database.UpdateUserParams
 	// get update params from request body
@@ -189,30 +189,30 @@ func getLinkToken(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	plaidClient := utils.GetPlaidClient()
 	config := utils.GetConfig()
-	
+
 	user := plaid.NewLinkTokenCreateRequestUser(userID.(string))
-	
+
 	request := plaid.NewLinkTokenCreateRequest(
 		"Purch",
 		"en",
 		config.GetPlaidCountryCodes(),
 	)
-	
+
 	request.SetUser(*user)
 	request.SetProducts(config.GetPlaidProducts())
 	request.SetRedirectUri(config.PlaidRedirectUri)
-	
+
 	resp, _, err := plaidClient.PlaidApi.LinkTokenCreate(c.Request.Context()).LinkTokenCreateRequest(*request).Execute()
-	
+
 	if err != nil {
 		slog.Error("failed to create link token.", "error", err, "endpoint", "/api/user/link-token")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
-	c.JSON(http.StatusOK, 
+
+	c.JSON(http.StatusOK,
 		gin.H{
-			"LinkToken": resp.GetLinkToken(), 
+			"LinkToken": resp.GetLinkToken(),
 			"ExpiresAt": resp.GetExpiration(),
 		},
 	)
@@ -221,18 +221,18 @@ func getLinkToken(c *gin.Context) {
 func exchangePublicToken(c *gin.Context) {
 	userID, _ := c.Get("userID")
 	plaidClient := utils.GetPlaidClient()
-	
+
 	publicToken := c.Query("public_token")
 	if publicToken == "" {
 		slog.Error("public token not found in query params.", "endpoint", "/api/user/exchange-public-token")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "public token not provided in query params as public_token"})
 		return
 	}
-	
+
 	request := plaid.NewItemPublicTokenExchangeRequest(publicToken)
-	
+
 	resp, _, err := plaidClient.PlaidApi.ItemPublicTokenExchange(c.Request.Context()).ItemPublicTokenExchangeRequest(*request).Execute()
-	
+
 	if err != nil {
 		slog.Error("failed to exchange public token for access token.", "error", err, "endpoint", "/api/user/exchange-public-token")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -252,7 +252,7 @@ func exchangePublicToken(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no item ID present after getting access token"})
 		return
 	}
-	
+
 	// in separate goroutine run item->accounts->transactions pipeline
 	// and log whether it was successful or not
 	go func() {
@@ -267,6 +267,6 @@ func exchangePublicToken(c *gin.Context) {
 			slog.Info("successfully synced all accounts and transactions.", "itemID", *itemID, "userID", userID)
 		}
 	}()
-	
+
 	c.JSON(http.StatusOK, gin.H{"message": "Bank linked with Purch, syncing information..."})
 }

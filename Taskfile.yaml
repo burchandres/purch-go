@@ -25,7 +25,20 @@ tasks:
   # ------- Lint -------
   lint:
     cmds:
-      - golangci-lint run
+      - golangci-lint run ./...
+
+  format:
+    cmds:
+      - go fmt ./...
+  
+  vet:
+    cmds:
+      - go vet ./...
+
+  nag:
+    cmds:
+      - task: format
+      - task: vet
 
   # ------- Test ------- 
   test:

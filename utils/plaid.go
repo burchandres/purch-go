@@ -2,7 +2,7 @@ package utils
 
 import (
 	"github.com/plaid/plaid-go/v40/plaid"
-	
+
 	"sync"
 )
 
@@ -10,7 +10,6 @@ var (
 	plaidClient *plaid.APIClient
 	plaidOnce   sync.Once
 )
-
 
 func GetPlaidClient() *plaid.APIClient {
 	plaidOnce.Do(func() {
@@ -29,6 +28,6 @@ func GetPlaidClient() *plaid.APIClient {
 		// return plaid api client to be used
 		plaidClient = plaid.NewAPIClient(configuration)
 	})
-	
+
 	return plaidClient
 }

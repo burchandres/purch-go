@@ -1,19 +1,19 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"context"
-	"time"
 	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
-	
+
 	"purch/api"
-	"purch/utils"
 	"purch/database"
+	"purch/utils"
 )
 
 func main() {
@@ -59,9 +59,9 @@ func getServer() *http.Server {
 
 	api.SetupUserEndpoints(router)
 	api.SetupBudgetEndpoints(router)
-	
+
 	return &http.Server{
-		Addr: ":8080",
+		Addr:    ":8080",
 		Handler: router,
 	}
 }

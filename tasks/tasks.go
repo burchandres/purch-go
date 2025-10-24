@@ -8,27 +8,27 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/plaid/plaid-go/v40/plaid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/plaid/plaid-go/v40/plaid"
 
 	"purch/database"
 	"purch/utils"
 )
 
 const (
-	YYYYMMDD = "2006-01-02"
+	YYYYMMDD        = "2006-01-02"
 	unknownCategory = "unknown_category"
 )
 
 var (
 	ErrRequestingItem = errors.New("error requesting new item information")
-	ErrStoringItem = errors.New("error storing new item information")
+	ErrStoringItem    = errors.New("error storing new item information")
 
 	ErrRequestingAccounts = errors.New("error requesting new accounts information")
-	ErrStoringAccounts = errors.New("error storing new accounts information")
+	ErrStoringAccounts    = errors.New("error storing new accounts information")
 
 	ErrRequestingTransactions = errors.New("error requesting transactions")
-	ErrStoringTransactions = errors.New("error storing transactions")
+	ErrStoringTransactions    = errors.New("error storing transactions")
 )
 
 func SyncItemAccountsTransactionsPipeline(
@@ -53,9 +53,9 @@ func SyncItemAccountsTransactionsPipeline(
 }
 
 func SyncItem(
-	ctx context.Context, 
-	userID string, 
-	itemID string, 
+	ctx context.Context,
+	userID string,
+	itemID string,
 	accessToken string,
 ) error {
 	plaidClient := utils.GetPlaidClient()
@@ -115,7 +115,11 @@ func SyncAccounts(
 		slog.Error("error starting transaction for account storage", "item", itemID)
 		return ErrStoringAccounts
 	}
-	defer func() {if err == nil {tx.Commit(ctx)}}()
+	defer func() {
+		if err == nil {
+			tx.Commit(ctx)
+		}
+	}()
 
 	queriesTx := database.New(tx)
 
@@ -150,7 +154,7 @@ func SyncTransactions(
 	modifiedChan := make(chan []plaid.Transaction)
 	removedChan := make(chan []plaid.RemovedTransaction)
 	errChan := make(chan error, 3)
-	
+
 	processCtx, cancel := context.WithCancel(ctx)
 
 	// get all newly added transactions and push
@@ -171,16 +175,17 @@ func SyncTransactions(
 	var err error
 	var nextCursor string
 	hasMore := true
-	HasMore: for hasMore {
+HasMore:
+	for hasMore {
 		select {
 		case <-ctx.Done():
 			cancel()
 			break HasMore
 		default:
 			hasMore, nextCursor, err = gatherTransactionsForProcessing(
-				ctx, 
-				itemID, 
-				accessToken, 
+				ctx,
+				itemID,
+				accessToken,
 				cursor,
 				addedChan,
 				modifiedChan,
@@ -202,14 +207,14 @@ func SyncTransactions(
 	close(errChan)
 	// to prevent any leaks
 	cancel()
-	
+
 	// push cursor to item
 	go func() {
 		if err := updateItemCursor(ctx, itemID, cursor); err != nil {
 			slog.Error("error updating item cursor", "error", err.Error(), "itemID", itemID)
 		}
 	}()
-	
+
 	for err = range errChan {
 		slog.Error("error syncing transactions", "error", err.Error(), "itemID", itemID, "lastCursor", cursor)
 		return err
@@ -286,7 +291,7 @@ func processAddedTransactions(
 	tx, err := db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		slog.Error("error beginning db tx for added transactions", "error", err.Error())
-		errChan<-err
+		errChan <- err
 		return
 	}
 	queries := database.New(tx)
@@ -303,7 +308,7 @@ func processAddedTransactions(
 				storeTransactionParams := getStoreTransactionParams(transaction)
 				if _, err := queries.StoreTransaction(ctx, storeTransactionParams); err != nil {
 					slog.Error("error storing added transaction", "error", err.Error(), "itemID", itemID)
-					errChan<-err
+					errChan <- err
 					tx.Rollback(ctx)
 					return
 				}
@@ -324,25 +329,25 @@ func getStoreTransactionParams(transaction plaid.Transaction) database.StoreTran
 	// use this link: https://github.com/plaid/plaid-go/blob/master/plaid/model_transaction.go
 	// and this link: https://plaid.com/docs/api/products/transactions/#transactionssync
 	var storeTransactionParams database.StoreTransactionParams
-	
+
 	storeTransactionParams.ID = transaction.GetTransactionId()
 	storeTransactionParams.AccountID = transaction.GetAccountId()
-	
+
 	categoryLabel := unknownCategory
 	if len(transaction.GetCategory()) > 0 {
 		categoryLabel = transaction.GetCategory()[0]
 	}
 	storeTransactionParams.CategoryLabel = categoryLabel
-	
+
 	authorizedDate, _ := time.Parse(YYYYMMDD, transaction.GetAuthorizedDate())
 	storeTransactionParams.AuthorizedDate = pgtype.Date{Time: authorizedDate, Valid: true}
 	storeTransactionParams.Merchant = pgtype.Text{String: transaction.GetMerchantName(), Valid: true}
-	
+
 	var amount pgtype.Numeric
 	// TODO: read error from this later
 	amount.Scan(transaction.GetAmount())
 	storeTransactionParams.Amount = amount
-	
+
 	storeTransactionParams.CurrencyCode = pgtype.Text{String: transaction.GetIsoCurrencyCode(), Valid: true}
 	storeTransactionParams.Pending = transaction.GetPending()
 
@@ -359,7 +364,7 @@ func processModifiedTransactions(
 	tx, err := db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		slog.Error("error beginning db tx for modified transactions", "error", err.Error())
-		errChan<-err
+		errChan <- err
 		return
 	}
 	queries := database.New(tx)
@@ -372,7 +377,7 @@ func processModifiedTransactions(
 				updateTransactionParams := getUpdateTransactionParams(transaction)
 				if _, err := queries.UpdateTransaction(ctx, updateTransactionParams); err != nil {
 					slog.Error("error processing modified transactions", "error", err.Error(), "itemID", itemID)
-					errChan<-err
+					errChan <- err
 					tx.Rollback(ctx)
 					return
 				}
@@ -393,17 +398,17 @@ func getUpdateTransactionParams(transaction plaid.Transaction) database.UpdateTr
 	// use this link: https://github.com/plaid/plaid-go/blob/master/plaid/model_transaction.go
 	// and this link: https://plaid.com/docs/api/products/transactions/#transactionssync
 	var updateTransactionParams database.UpdateTransactionParams
-	
+
 	updateTransactionParams.ID = transaction.GetTransactionId()
-	
+
 	settledDate, _ := time.Parse(YYYYMMDD, transaction.GetDate())
 	updateTransactionParams.SettledDate = pgtype.Date{Time: settledDate, Valid: true}
-	
+
 	var amount pgtype.Numeric
 	// TODO: read error from below scan later
 	amount.Scan(transaction.GetAmount())
 	updateTransactionParams.Amount = amount
-	
+
 	updateTransactionParams.Pending = transaction.GetPending()
 	return updateTransactionParams
 }
@@ -418,7 +423,7 @@ func processRemovedTransactions(
 	tx, err := db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		slog.Error("error beginning db tx for deleted transactions", "error", err.Error())
-		errChan<-err
+		errChan <- err
 		return
 	}
 	queries := database.New(tx)
@@ -426,12 +431,12 @@ func processRemovedTransactions(
 		select {
 		case <-ctx.Done():
 			return
-		case transactions := <- removedChan:
+		case transactions := <-removedChan:
 			for _, transaction := range transactions {
 				transactionID := transaction.GetTransactionId()
 				if err := queries.DeleteTransaction(ctx, transactionID); err != nil {
 					slog.Error("error deleting transaction", "error", err.Error(), "itemID", itemID, "transactionID", transactionID)
-					errChan<-err
+					errChan <- err
 					tx.Rollback(ctx)
 					return
 				}
@@ -458,7 +463,7 @@ func updateItemCursor(ctx context.Context, itemID string, cursor string) error {
 	}
 	updateItemParams := database.UpdateItemParams{
 		TransactionCursor: cursor,
-		Name: item.Name,
+		Name:              item.Name,
 	}
 	if _, err := queries.UpdateItem(ctx, updateItemParams); err != nil {
 		slog.Error("error updating item cursor", "error", err.Error(), "itemID", itemID)

@@ -427,9 +427,9 @@ RETURNING id, user_id, access_token, name, transaction_cursor
 `
 
 type StoreItemParams struct {
-	ID              string
-	UserID          string
-	AccessToken     string
+	ID          string
+	UserID      string
+	AccessToken string
 	Name        string
 }
 
@@ -465,7 +465,7 @@ RETURNING id, account_id, category_label, authorized_date, settled_date, merchan
 type StoreTransactionParams struct {
 	ID             string
 	AccountID      string
-	CategoryLabel     string
+	CategoryLabel  string
 	AuthorizedDate pgtype.Date
 	Merchant       pgtype.Text
 	Amount         pgtype.Numeric
