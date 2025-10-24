@@ -96,7 +96,7 @@ func authMiddleware() gin.HandlerFunc {
 		
 		// Store userID in context for use in handlers
 		c.Set("userID", claims.UserID)
-		slog.Info("user authenticated and user_id context set", "userID", claims.UserID)
+		slog.Debug("user authenticated and userID context set.", "userID", claims.UserID, "endpoint", c.Request.URL)
 		
 		c.Next()
 	}
