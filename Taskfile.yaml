@@ -5,6 +5,14 @@ tasks:
   build:
     cmds:
       - docker compose build
+      
+  # use a space delineated list 
+  # of individual services to bring up 
+  # if you don't want to bring everything up
+  # e.g. task up -- postgres <-- only brings up the postgres container
+  up:
+    cmds:
+      - docker compose -f docker-compose.yml up {{.CLI_ARGS}} -d
 
   # use a space delineated list 
   # of individual services to bring down
@@ -13,14 +21,6 @@ tasks:
   down:
     cmds:
       - docker compose -f docker-compose.yml down {{.CLI_ARGS}}
-
-  # use a space delineated list 
-  # of individual services to bring up 
-  # if you don't want to bring everything up
-  # e.g. task up -- postgres <-- only brings up the postgres container
-  up:
-    cmds:
-      - docker compose -f docker-compose.yml up {{.CLI_ARGS}} -d
       
   # ------- Lint -------
   lint:

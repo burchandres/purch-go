@@ -95,6 +95,12 @@ func GetAccount(ctx context.Context, id string) (Account, error) {
 	return account, err
 }
 
+// Insert a single account
+func StoreAccount(ctx context.Context, account Account) error {
+	return db.NewInsert().Model(&account).Scan(ctx)
+}
+
+// Batch insert a slice of accounts
 func StoreAccounts(ctx context.Context, accounts []*Account) error {
 	return db.NewInsert().Model(accounts).Scan(ctx)
 }

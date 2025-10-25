@@ -19,24 +19,24 @@ import (
 func main() {
 	// get service configurations
 	config := utils.GetConfig()
-	slog.Info("loaded config", "config", config)
-
-	// get API server
-	server := getServer()
+	slog.Info("loaded config.", "config", *config)
 
 	// setup database connection pool
 	if err := database.Init(config.GetPostgresURL()); err != nil {
 		panic(err)
 	}
 	defer database.Close()
-	slog.Info("initialized database pool")
-
+	slog.Info("initialized database pool.")
+	
+	// get API server
+	server := getServer()
 	// run server
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			panic(err)
 		}
 	}()
+	
 	// watch for shutdown signals
 	signalChan := make(chan os.Signal, 1)
 
@@ -47,16 +47,16 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
-		slog.Info("error shutting down server", "error", err)
+		slog.Info("error shutting down server.", "error", err.Error())
 	}
-	slog.Info("shutdown complete")
+	slog.Info("shutdown complete.")
 }
 
 func getServer() *http.Server {
 	router := gin.Default()
 
 	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{"message": "pong"})
+		c.JSON(http.StatusOK, gin.H{"message": "pong"})
 	})
 
 	api.SetupUserEndpoints(router)
