@@ -69,22 +69,23 @@ func setUserCookie(c *gin.Context) {
 	username := c.Query("username")
 	slog.Info("setting cookie for user.", "username", username)
 	user, err := database.GetUserByUsername(c.Request.Context(), username)
+	userID := user.ID.String()
 	if err != nil {
-		slog.Error("user with provided username does not exist.", "error", err.Error(), "endpoint", "/api/user/set")
+		slog.Error("user with provided username does not exist.", "error", err.Error(), "userID", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "user with provided username does not exist"})
 		return
 	}
 	// verify provided password
 	password := c.Query("password")
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		slog.Error("incorrect password provided.", "error", err.Error(), "endpoint", "/api/user/set")
+		slog.Error("incorrect password provided.", "error", err.Error(), "userID", userID)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect password provided."})
 		return
 	}
 	// create jwt token for user to set in cookie
-	token, err := createToken(user.ID)
+	token, err := createToken(userID)
 	if err != nil {
-		slog.Error("failed to create token.", "error", err.Error(), "endpoint", "/api/user/set")
+		slog.Error("failed to create token.", "error", err.Error(), "userID", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create token."})
 		return
 	}
@@ -136,15 +137,16 @@ func deleteUser(c *gin.Context) {
 
 func updateUser(c *gin.Context) {
 	user, _ := c.Get("user")
+	userID := user.(database.User).ID.String()
 	// get update params
 	var updateParams database.UpdateUserParams
 	// get update params from request body
 	if err := c.BindJSON(&updateParams); err != nil {
-		slog.Error("error binding update params.", "error", err.Error(), "endpoint", "/api/user/update")
+		slog.Error("error binding update params.", "error", err.Error(), "userID", userID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	if err := database.UpdateUser(c.Request.Context(), user.(database.User).ID, updateParams); err != nil {
+	if err := database.UpdateUser(c.Request.Context(), userID, updateParams); err != nil {
 		slog.Error("error updating user.", "error", err.Error(), "userID")
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "user updated successfully"})
@@ -152,10 +154,11 @@ func updateUser(c *gin.Context) {
 
 func getLinkToken(c *gin.Context) {
 	user, _ := c.Get("user")
+	userID := user.(database.User).ID.String()
 	plaidClient := utils.GetPlaidClient()
 	config := utils.GetConfig()
 
-	requestUser := plaid.NewLinkTokenCreateRequestUser(user.(database.User).ID)
+	requestUser := plaid.NewLinkTokenCreateRequestUser(userID)
 
 	request := plaid.NewLinkTokenCreateRequest(
 		"Purch",
@@ -185,11 +188,12 @@ func getLinkToken(c *gin.Context) {
 
 func exchangePublicToken(c *gin.Context) {
 	user, _ := c.Get("user")
+	userID := user.(database.User).ID.String()
 	plaidClient := utils.GetPlaidClient()
 
 	publicToken := c.Query("public_token")
 	if publicToken == "" {
-		slog.Error("public token not found in query params.", "endpoint", "/api/user/exchange-public-token")
+		slog.Error("public token not found in query params.", "userID", userID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "public token not provided in query params as public_token"})
 		return
 	}
@@ -199,14 +203,14 @@ func exchangePublicToken(c *gin.Context) {
 	resp, _, err := plaidClient.PlaidApi.ItemPublicTokenExchange(c.Request.Context()).ItemPublicTokenExchangeRequest(*request).Execute()
 
 	if err != nil {
-		slog.Error("failed to exchange public token for access token.", "error", err, "endpoint", "/api/user/exchange-public-token")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("failed to exchange public token for access token.", "error", err, "userID", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to exchange public token for access token"})
 		return
 	}
 
 	accessToken, ok := resp.GetAccessTokenOk()
 	if !ok {
-		slog.Error("no access token present after exchanging with public token.", "userID", user.(database.User).ID)
+		slog.Error("no access token present after exchanging with public token.", "userID", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no access token provided"})
 		return
 	}
@@ -223,13 +227,13 @@ func exchangePublicToken(c *gin.Context) {
 	go func() {
 		if err := tasks.SyncItemAccountsTransactionsPipeline(
 			c.Request.Context(),
-			user.(database.User).ID,
+			userID,
 			*itemID,
 			*accessToken,
 		); err != nil {
-			slog.Error("error with item->accounts->transactions initial sync pipeline.", "error", err.Error(), "userID", user.(database.User).ID)
+			slog.Error("error with item->accounts->transactions initial sync pipeline.", "error", err.Error(), "userID", userID)
 		} else {
-			slog.Info("successfully synced all accounts and transactions.", "itemID", *itemID, "userID", user.(database.User).ID)
+			slog.Info("successfully synced all accounts and transactions.", "itemID", *itemID, "userID", userID)
 		}
 	}()
 

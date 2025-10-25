@@ -19,7 +19,7 @@ type User struct {
 	Password   string    `bun:",notnull"`
 	Income     *float64  `bun:"type:numeric"`
 	IncomeRate *string   `bun:"income_rate"`
-	
+
 	Categories []*Category `bun:"rel:has-many,join:id=user_id`
 	Items      []*Item     `bun:"rel:has-many,join:id=user_id`
 }
