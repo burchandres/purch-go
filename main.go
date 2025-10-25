@@ -20,15 +20,17 @@ func main() {
 	// get service configurations
 	config := utils.GetConfig()
 	slog.Info("loaded config", "config", config)
+
 	// get API server
 	server := getServer()
+
 	// setup database connection pool
 	if err := database.Init(config.GetPostgresURL()); err != nil {
-		slog.Error("failed to initialize database pool", "error", err)
 		panic(err)
 	}
 	defer database.Close()
 	slog.Info("initialized database pool")
+
 	// run server
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
