@@ -3,10 +3,13 @@ package database
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // TODO: refactor all this into BudgetService and UserService structs
+
+// -------- User Queries --------
 
 func GetUserByUsername(ctx context.Context, username string) (User, error) {
 	var user User
@@ -17,7 +20,7 @@ func GetUserByUsername(ctx context.Context, username string) (User, error) {
 	return user, err
 }
 
-func GetUserByID(ctx context.Context, id string) (User, error) {
+func GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 	var user User
 	err := db.NewSelect().
 		Model(&user).
@@ -30,7 +33,7 @@ func StoreUser(ctx context.Context, user User) error {
 	return db.NewInsert().Model(user).Scan(ctx)
 }
 
-func UpdateUser(ctx context.Context, id string, updateParams UpdateUserParams) error {
+func UpdateUser(ctx context.Context, id uuid.UUID, updateParams UpdateUserParams) error {
 	stmt := db.NewUpdate().Model((*User)(nil))
 	// build up query
 	if updateParams.FirstName != nil {
@@ -64,4 +67,34 @@ func DeleteUser(ctx context.Context, user User) error {
 		WherePK().
 		Exec(ctx)
 	return err
+}
+
+// -------- Item Queries --------
+
+func GetItem(ctx context.Context, id string) (Item, error) {
+	var item Item
+	err := db.NewSelect().
+		Model(&item).
+		Where("id = ?", id).
+		Scan(ctx)
+	return item, err
+}
+
+func StoreItem(ctx context.Context, item Item) error {
+	return db.NewInsert().Model(item).Scan(ctx)
+}
+
+// -------- Account Queries --------
+
+func GetAccount(ctx context.Context, id string) (Account, error) {
+	var account Account
+	err := db.NewSelect().
+		Model(&account).
+		Where("id = ?", id).
+		Scan(ctx)
+	return account, err
+}
+
+func StoreAccounts(ctx context.Context, accounts []*Account) error {
+	return db.NewInsert().Model(accounts).Scan(ctx)
 }

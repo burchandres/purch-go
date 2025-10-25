@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/plaid/plaid-go/v40/plaid"
 
 	"purch/database"
@@ -31,7 +32,7 @@ var (
 
 func SyncItemAccountsTransactionsPipeline(
 	ctx context.Context,
-	userID string,
+	userID uuid.UUID,
 	itemID string,
 	accessToken string,
 ) error {
@@ -49,18 +50,18 @@ func SyncItemAccountsTransactionsPipeline(
 
 func SyncItem(
 	ctx context.Context,
-	userID string,
+	userID uuid.UUID,
 	itemID string,
 	accessToken string,
 ) error {
 	plaidClient := utils.GetPlaidClient()
-	slog.Debug("pulling item info to store", "item", itemID, "user", userID)
+	slog.Debug("pulling item info from plaid for local persistence.", "itemID", itemID, "user", userID.String())
 	// create itemGetRequest
 	request := plaid.NewItemGetRequest(accessToken)
 	// execute itemGetRequest
 	resp, _, err := plaidClient.PlaidApi.ItemGet(ctx).ItemGetRequest(*request).Execute()
 	if err != nil {
-		slog.Error("failed to get item", "error", err, "endpoint", "/api/user/exchange-public-token")
+		slog.Error("failed to get item info.", "error", err.Error(), "userID", userID.String())
 		return ErrRequestingItem
 	}
 	item := resp.GetItem()
@@ -71,8 +72,7 @@ func SyncItem(
 	itemParams.UserID = userID
 	itemParams.Name = item.GetInstitutionName()
 	// store the item
-	_, err = database.StoreItem(ctx, itemParams)
-	if err != nil {
+	if err = database.StoreItem(ctx, itemParams); err != nil {
 		slog.Error("failed to store item", "error", err, "endpoint", "/api/user/exchange-public-token")
 		return ErrStoringItem
 	}
@@ -86,51 +86,34 @@ func SyncAccounts(
 	accessToken string,
 ) error {
 	plaidClient := utils.GetPlaidClient()
-	db := database.GetPool()
-	slog.Info("pulling all accounts", "item", itemID)
+	slog.Debug("pulling all accounts' information from plaid.", "item", itemID)
 	// create GetAccountsRequest
 	accountsGetRequest := plaid.NewAccountsGetRequest(accessToken)
 	// execute GetAccountsRequest
 	accountsGetResp, _, err := plaidClient.PlaidApi.AccountsGet(ctx).AccountsGetRequest(*accountsGetRequest).Execute()
 	if err != nil {
-		slog.Error("error requesting accounts info", "item", itemID)
+		slog.Error("error requesting accounts' information.", "item", itemID)
 		return ErrRequestingAccounts
 	}
 	// store all accounts
 	accounts, ok := accountsGetResp.GetAccountsOk()
 	if !ok {
-		slog.Error("error pulling accounts", "item", itemID)
+		slog.Error("error pulling accounts.", "item", itemID)
 		return ErrRequestingAccounts
 	}
-	// start database transaction
-	tx, err := db.BeginTx(ctx, pgx.TxOptions{})
-	if err != nil {
-		slog.Error("error starting transaction for account storage", "item", itemID)
-		return ErrStoringAccounts
-	}
-	defer func() {
-		if err == nil {
-			tx.Commit(ctx)
-		}
-	}()
-
-	queriesTx := database.New(tx)
-
-	for _, account := range *accounts {
-		var storeAccountParams database.StoreAccountParams
+	// bulk insert accounts
+	accountsToStore := make([]*database.Account, len(*accounts))
+	for i, account := range *accounts {
+		var storeAccountParams database.Account
 
 		storeAccountParams.ID = account.GetAccountId()
 		storeAccountParams.ItemID = itemID
 		storeAccountParams.Name = account.GetName()
-		// push using the transaction so we commit all at once to avoid overhead
-		if _, err = queriesTx.StoreAccount(ctx, storeAccountParams); err != nil {
-			tx.Rollback(ctx)
-			slog.Error("error storing account", "itemID", itemID, "accountName", account.GetName())
-			return ErrStoringAccounts
-		}
+
+		accountsToStore[i] = &storeAccountParams
 	}
 
-	return nil
+	return database.StoreAccounts(ctx, accountsToStore)
 }
 
 type TransactionsWorker struct {

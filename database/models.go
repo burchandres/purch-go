@@ -20,8 +20,8 @@ type User struct {
 	Income     *float64  `bun:"type:numeric"`
 	IncomeRate *string   `bun:"income_rate"`
 
-	Categories []*Category `bun:"rel:has-many,join:id=user_id`
-	Items      []*Item     `bun:"rel:has-many,join:id=user_id`
+	Categories []*Category `bun:"rel:has-many,join:id=user_id"`
+	Items      []*Item     `bun:"rel:has-many,join:id=user_id"`
 }
 
 type Category struct {
@@ -46,7 +46,7 @@ type Item struct {
 	TransactionCursor string    `bun:"transaction_cursor,notnull,default:''"`
 
 	User     *User      `bun:"rel:belongs-to,join:user_id=id"`
-	Accounts []*Account `bun:"rel:has-many,join:id=item_id`
+	Accounts []*Account `bun:"rel:has-many,join:id=item_id"`
 }
 
 type Account struct {
@@ -57,7 +57,7 @@ type Account struct {
 	Name   string `bun:",notnull"`
 
 	Item         *Item          `bun:"rel:belongs-to,join:item_id=id"`
-	Transactions []*Transaction `bun:"rel:has-many,join:id=account_id`
+	Transactions []*Transaction `bun:"rel:has-many,join:id=account_id"`
 }
 
 type Transaction struct {

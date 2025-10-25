@@ -4,17 +4,14 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 
 	"purch/database"
+	"purch/utils"
 )
-
-// Secret key for signing tokens (in production, load from environment)
-var secretKey = []byte(os.Getenv("SECRET_KEY"))
 
 // Claims represents the JWT claims
 type Claims struct {
@@ -24,6 +21,7 @@ type Claims struct {
 
 // CreateToken generates a JWT token and returns it as a string
 func createToken(userID string) (string, error) {
+	config := utils.GetConfig()
 	issuedAt := time.Now()
 	expiresAt := time.Now().Add(30 * time.Minute)
 
@@ -37,7 +35,7 @@ func createToken(userID string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(secretKey)
+	tokenString, err := token.SignedString(config.SecretKey)
 	if err != nil {
 		return "", err
 	}
@@ -48,12 +46,13 @@ func createToken(userID string) (string, error) {
 // ParseToken validates and parses a JWT token string
 func parseToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
+	config := utils.GetConfig()
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return secretKey, nil
+		return config.SecretKey, nil
 	})
 	if err != nil {
 		return nil, err
