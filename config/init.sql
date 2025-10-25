@@ -61,4 +61,4 @@ INSERT INTO users (
     password,
     income,
     income_rate
-) VALUES ('test', 'user', 'test_user', 'test_pass', 1000, 'weekly');
+) VALUES ('test', 'user', 'testuser', '$2a$10$AQOLxQTZS/V3XS/3qFkUxe3RQ6UqqOW/a2zuxJAN0Nhpe5zUVnoSu', 1000, 'weekly');

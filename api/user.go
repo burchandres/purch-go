@@ -48,8 +48,8 @@ func registerUser(c *gin.Context) {
 	// hash the password before pushing to postgres
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
 	if err != nil {
-		slog.Error("failed to hash password.", "error", err, "endpoint", "/api/user/register")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("failed to hash password.", "error", err.Error(), "endpoint", "/api/user/register")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
 		return
 	}
 	newUser.Password = string(hashedPassword)
@@ -58,7 +58,7 @@ func registerUser(c *gin.Context) {
 	err = database.StoreUser(c.Request.Context(), newUser)
 	if err != nil {
 		slog.Error("failed to store user.", "error", err, "endpoint", "/api/user/register")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to store user"})
 		return
 	}
 	c.JSON(http.StatusCreated, newUser)
@@ -70,22 +70,22 @@ func setUserCookie(c *gin.Context) {
 	slog.Info("setting cookie for user.", "username", username)
 	user, err := database.GetUserByUsername(c.Request.Context(), username)
 	if err != nil {
-		slog.Error("user with provided username does not exist.", "error", err, "endpoint", "/api/user/set")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("user with provided username does not exist.", "error", err.Error(), "endpoint", "/api/user/set")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user with provided username does not exist"})
 		return
 	}
 	// verify provided password
 	password := c.Query("password")
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		slog.Error("incorrect password provided.", "error", err, "endpoint", "/api/user/set")
+		slog.Error("incorrect password provided.", "error", err.Error(), "endpoint", "/api/user/set")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect password provided."})
 		return
 	}
 	// create jwt token for user to set in cookie
 	token, err := createToken(user.ID)
 	if err != nil {
-		slog.Error("failed to create token.", "error", err, "endpoint", "/api/user/set")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		slog.Error("failed to create token.", "error", err.Error(), "endpoint", "/api/user/set")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create token."})
 		return
 	}
 	// set cookie for user
@@ -147,7 +147,7 @@ func updateUser(c *gin.Context) {
 	if err := database.UpdateUser(c.Request.Context(), user.(database.User).ID, updateParams); err != nil {
 		slog.Error("error updating user.", "error", err.Error(), "userID")
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "user updated"})
+	c.JSON(http.StatusOK, gin.H{"message": "user updated successfully"})
 }
 
 func getLinkToken(c *gin.Context) {
@@ -227,7 +227,7 @@ func exchangePublicToken(c *gin.Context) {
 			*itemID,
 			*accessToken,
 		); err != nil {
-			slog.Error("error with item->accounts->transactions initial sync pipeline.", "error", err.Error())
+			slog.Error("error with item->accounts->transactions initial sync pipeline.", "error", err.Error(), "userID", user.(database.User).ID)
 		} else {
 			slog.Info("successfully synced all accounts and transactions.", "itemID", *itemID, "userID", user.(database.User).ID)
 		}

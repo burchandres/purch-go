@@ -2,6 +2,8 @@ package database
 
 import (
 	"database/sql"
+	"runtime"
+
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/driver/pgdriver"
@@ -14,8 +16,9 @@ func Init(connString string) error {
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(connString)))
 
 	// Configure connection pool (adjust these to match your needs)
-	sqldb.SetMaxOpenConns(25)
-	sqldb.SetMaxIdleConns(25)
+	maxOpenConns := 4 * runtime.GOMAXPROCS(0)
+	sqldb.SetMaxOpenConns(maxOpenConns)
+	sqldb.SetMaxIdleConns(maxOpenConns)
 
 	// Wrap with Bun
 	db = bun.NewDB(sqldb, pgdialect.New())

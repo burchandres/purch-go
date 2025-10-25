@@ -7,8 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/plaid/plaid-go/v40/plaid"
 
 	"purch/database"
@@ -38,15 +36,12 @@ func SyncItemAccountsTransactionsPipeline(
 	accessToken string,
 ) error {
 	if err := SyncItem(ctx, userID, itemID, accessToken); err != nil {
-		slog.Error("error storing item in item->accounts->transactions intial sync pipeline", "error", err.Error())
 		return err
 	}
 	if err := SyncAccounts(ctx, itemID, accessToken); err != nil {
-		slog.Error("error storing accounts in item->accounts->transactions initial sync pipeline", "error", err.Error())
 		return err
 	}
 	if err := SyncTransactions(ctx, itemID, accessToken, ""); err != nil {
-		slog.Error("error syncing transactions in item->accounts->transactions initial sync pipeline", "error", err.Error())
 		return err
 	}
 	return nil
@@ -59,9 +54,7 @@ func SyncItem(
 	accessToken string,
 ) error {
 	plaidClient := utils.GetPlaidClient()
-	db := database.GetPool()
-	queries := database.New(db)
-	slog.Info("pulling item info to store", "item", itemID, "user", userID)
+	slog.Debug("pulling item info to store", "item", itemID, "user", userID)
 	// create itemGetRequest
 	request := plaid.NewItemGetRequest(accessToken)
 	// execute itemGetRequest
@@ -72,13 +65,13 @@ func SyncItem(
 	}
 	item := resp.GetItem()
 	// create query params for storing item
-	var storeItemParams database.StoreItemParams
-	storeItemParams.ID = itemID
-	storeItemParams.AccessToken = accessToken
-	storeItemParams.UserID = userID
-	storeItemParams.Name = item.GetInstitutionName()
+	var itemParams database.Item
+	itemParams.ID = itemID
+	itemParams.AccessToken = accessToken
+	itemParams.UserID = userID
+	itemParams.Name = item.GetInstitutionName()
 	// store the item
-	_, err = queries.StoreItem(ctx, storeItemParams)
+	_, err = database.StoreItem(ctx, itemParams)
 	if err != nil {
 		slog.Error("failed to store item", "error", err, "endpoint", "/api/user/exchange-public-token")
 		return ErrStoringItem
@@ -138,6 +131,11 @@ func SyncAccounts(
 	}
 
 	return nil
+}
+
+type TransactionsWorker struct {
+	ctx    context.Context
+	itemID string
 }
 
 func SyncTransactions(

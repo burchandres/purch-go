@@ -1,8 +1,10 @@
 package database
 
 import (
-	"github.com/uptrace/bun"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/uptrace/bun"
 )
 
 // -------- Core Schemas --------
@@ -10,23 +12,26 @@ import (
 type User struct {
 	bun.BaseModel `bun:"table:users,alias:u"`
 
-	ID         string   `bun:"id,pk,default:gen_random_uuid()"`
-	FirstName  string   `bun:"first_name,notnull"`
-	LastName   string   `bun:"last_name,notnull"`
-	Username   string   `bun:",unique,notnull"`
-	Password   string   `bun:",notnull"`
-	Income     *float64 `bun:"type:numeric"`
-	IncomeRate *string  `bun:"income_rate"`
+	ID         uuid.UUID `bun:",pk,type:uuid,default:gen_random_uuid()"`
+	FirstName  string    `bun:"first_name,notnull"`
+	LastName   string    `bun:"last_name,notnull"`
+	Username   string    `bun:",unique,notnull"`
+	Password   string    `bun:",notnull"`
+	Income     *float64  `bun:"type:numeric"`
+	IncomeRate *string   `bun:"income_rate"`
+	
+	Categories []*Category `bun:"rel:has-many,join:id=user_id`
+	Items      []*Item     `bun:"rel:has-many,join:id=user_id`
 }
 
 type Category struct {
 	bun.BaseModel `bun:"table:categories,alias:c"`
 
-	ID                string  `bun:",pk,default:gen_random_uuid()"`
-	UserID            string  `bun:",notnull"`
-	Label             string  `bun:",notnull"`
-	CurrentSpending   float64 `bun:"type:numeric,notnull,default:0"`
-	AllocatedSpending float64 `bun:"type:numeric,notnull"`
+	ID                uuid.UUID `bun:",pk,type:uuid,default:gen_random_uuid()"`
+	UserID            uuid.UUID `bun:",type:uuid,notnull"`
+	Label             string    `bun:",notnull"`
+	CurrentSpending   float64   `bun:"type:numeric,notnull,default:0"`
+	AllocatedSpending float64   `bun:"type:numeric,notnull"`
 
 	User *User `bun:"rel:belongs-to,join:user_id=id"`
 }
@@ -34,13 +39,14 @@ type Category struct {
 type Item struct {
 	bun.BaseModel `bun:"table:items,alias:i"`
 
-	ID                string `bun:",pk"`
-	UserID            string `bun:",notnull"`
-	AccessToken       string `bun:"access_token,notnull"`
-	Name              string `bun:",notnull"`
-	TransactionCursor string `bun:"transaction_cursor,notnull,default:''"`
+	ID                string    `bun:",pk"`
+	UserID            uuid.UUID `bun:",type:uuid,notnull"`
+	AccessToken       string    `bun:"access_token,notnull"`
+	Name              string    `bun:",notnull"`
+	TransactionCursor string    `bun:"transaction_cursor,notnull,default:''"`
 
-	User *User `bun:"rel:belongs-to,join:user_id=id"`
+	User     *User      `bun:"rel:belongs-to,join:user_id=id"`
+	Accounts []*Account `bun:"rel:has-many,join:id=item_id`
 }
 
 type Account struct {
@@ -50,7 +56,8 @@ type Account struct {
 	ItemID string `bun:"item_id,notnull"`
 	Name   string `bun:",notnull"`
 
-	Item *Item `bun:"rel:belongs-to,join:item_id=id"`
+	Item         *Item          `bun:"rel:belongs-to,join:item_id=id"`
+	Transactions []*Transaction `bun:"rel:has-many,join:id=account_id`
 }
 
 type Transaction struct {
