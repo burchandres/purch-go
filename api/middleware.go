@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 
 	"purch/database"
 	"purch/utils"
@@ -96,12 +97,20 @@ func authMiddleware() gin.HandlerFunc {
 		}
 
 		// Store user in context for use in handlers
-		user, err := database.GetUserByID(c.Request.Context(), claims.UserID)
+		userID, err := uuid.Parse(claims.UserID)
 		if err != nil {
-			slog.Error("error getting user from db.", "error", err.Error(), "userID", claims.UserID, "endpoint", c.Request.URL)
+			slog.Error("error parsing user id from purch_token.", "error", err.Error(), "userID", claims.UserID)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user id format in purch_token"})
+			c.Abort()
+			return
+
+		}
+		user, err := database.GetUserByID(c.Request.Context(), userID)
+		if err != nil {
+			slog.Error("error getting user from db.", "error", err.Error(), "userID", userID, "endpoint", c.Request.URL)
 		}
 		c.Set("user", user)
-		slog.Debug("user authenticated and userID context set.", "userID", claims.UserID, "endpoint", c.Request.URL)
+		slog.Debug("user authenticated and userID context set.", "userID", userID, "endpoint", c.Request.URL)
 
 		c.Next()
 	}

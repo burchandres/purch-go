@@ -137,7 +137,7 @@ func deleteUser(c *gin.Context) {
 
 func updateUser(c *gin.Context) {
 	user, _ := c.Get("user")
-	userID := user.(database.User).ID.String()
+	userID := user.(database.User).ID
 	// get update params
 	var updateParams database.UpdateUserParams
 	// get update params from request body
@@ -188,7 +188,7 @@ func getLinkToken(c *gin.Context) {
 
 func exchangePublicToken(c *gin.Context) {
 	user, _ := c.Get("user")
-	userID := user.(database.User).ID.String()
+	userID := user.(database.User).ID
 	plaidClient := utils.GetPlaidClient()
 
 	publicToken := c.Query("public_token")

@@ -117,8 +117,14 @@ func SyncAccounts(
 }
 
 type TransactionsWorker struct {
-	ctx    context.Context
-	itemID string
+	ctx         context.Context
+	itemID      string
+	accessToken string
+
+	addedChan    chan []plaid.Transaction
+	modifiedChan chan []plaid.Transaction
+	removedChan  chan []plaid.Transaction
+	errChan      chan []error
 }
 
 func SyncTransactions(
