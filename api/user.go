@@ -1,8 +1,10 @@
 package api
 
 import (
+	// "database/sql"
 	"log/slog"
 	"net/http"
+	// "errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/plaid/plaid-go/v40/plaid"
@@ -24,52 +26,49 @@ func SetupUserEndpoints(r *gin.Engine) {
 		protected.GET("/logout", logout)
 		protected.PUT("/update", updateUser)
 		protected.GET("/link-token", getLinkToken)
-		protected.POST("/exchange-public-token", exchangePublicToken)
+		// protected.POST("/exchange-public-token", exchangePublicToken)
 		protected.DELETE("/delete", deleteUser)
 	}
 }
 
 func registerUser(c *gin.Context) {
-	db := database.GetPool()
-	queries := database.New(db)
 	// Implement user registration logic here
-	var storeUserParams database.StoreUserParams
+	var newUser database.User
 
-	if err := c.BindJSON(&storeUserParams); err != nil {
+	if err := c.BindJSON(&newUser); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	// verify user doesn't already exist
-	_, err := queries.GetUserByUsername(c.Request.Context(), storeUserParams.Username)
+	_, err := database.GetUserByUsername(c.Request.Context(), newUser.Username)
 	if err == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"message": "user with this username already exists"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user with this username already exists"})
 		return
 	}
 	// hash the password before pushing to postgres
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(storeUserParams.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
 	if err != nil {
 		slog.Error("failed to hash password.", "error", err, "endpoint", "/api/user/register")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	storeUserParams.Password = string(hashedPassword)
+	newUser.Password = string(hashedPassword)
 
-	registeredUser, err := queries.StoreUser(c.Request.Context(), storeUserParams)
+	// store user
+	err = database.StoreUser(c.Request.Context(), newUser)
 	if err != nil {
 		slog.Error("failed to store user.", "error", err, "endpoint", "/api/user/register")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusCreated, registeredUser)
+	c.JSON(http.StatusCreated, newUser)
 }
 
 func setUserCookie(c *gin.Context) {
-	db := database.GetPool()
-	queries := database.New(db)
 	// get user from db with provided username and password
 	username := c.Query("username")
 	slog.Info("setting cookie for user.", "username", username)
-	user, err := queries.GetUserByUsername(c.Request.Context(), username)
+	user, err := database.GetUserByUsername(c.Request.Context(), username)
 	if err != nil {
 		slog.Error("user with provided username does not exist.", "error", err, "endpoint", "/api/user/set")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -78,8 +77,8 @@ func setUserCookie(c *gin.Context) {
 	// verify provided password
 	password := c.Query("password")
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		slog.Error("failed to verify password.", "error", err, "endpoint", "/api/user/set")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		slog.Error("incorrect password provided.", "error", err, "endpoint", "/api/user/set")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect password provided."})
 		return
 	}
 	// create jwt token for user to set in cookie
@@ -103,16 +102,8 @@ func setUserCookie(c *gin.Context) {
 }
 
 func getUserInfo(c *gin.Context) {
-	db := database.GetPool()
-	queries := database.New(db)
 	// get user information from db
-	userID, _ := c.Get("userID")
-	user, err := queries.GetUserById(c.Request.Context(), userID.(string))
-	if err != nil {
-		slog.Error("failed to get user.", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+	user, _ := c.Get("user")
 	c.JSON(http.StatusOK, user)
 }
 
@@ -130,15 +121,13 @@ func logout(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "logout successful, cookie cleared"})
 }
 
+// TODO: call `/item/remove` Plaid endpoint to cancel associated access tokens to prevent unnecessary billing
 func deleteUser(c *gin.Context) {
-	db := database.GetPool()
-	queries := database.New(db)
 	// get user id from context
-	userID, _ := c.Get("userID")
-	// TODO: call `/item/remove` Plaid endpoint to cancel associated access tokens to prevent unnecessary billing
+	user, _ := c.Get("user")
 	// delete user from db
-	if err := queries.DeleteUser(c.Request.Context(), userID.(string)); err != nil {
-		slog.Error("failed to delete user.", "error", err, "endpoint", "/api/user/delete")
+	if err := database.DeleteUser(c.Request.Context(), user.(database.User)); err != nil {
+		slog.Error("failed to delete user.", "error", err, "userID", user.(database.User).ID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -146,51 +135,27 @@ func deleteUser(c *gin.Context) {
 }
 
 func updateUser(c *gin.Context) {
-	db := database.GetPool()
-	queries := database.New(db)
-	userID, _ := c.Get("userID")
-	user, err := queries.GetUserById(c.Request.Context(), userID.(string))
-	if err != nil {
-		slog.Error("failed to get user.", "error", err, "endpoint", "/api/user/update")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
+	user, _ := c.Get("user")
 	// get update params
 	var updateParams database.UpdateUserParams
 	// get update params from request body
 	if err := c.BindJSON(&updateParams); err != nil {
-		slog.Error("failed to bind update params.", "error", err, "endpoint", "/api/user/update")
+		slog.Error("error binding update params.", "error", err.Error(), "endpoint", "/api/user/update")
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// hash password if changed
-	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(updateParams.Password)); err != nil {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(updateParams.Password), bcrypt.DefaultCost)
-		if err != nil {
-			slog.Error("failed to generate password hash for new password.", "error", err, "endpoint", "/api/user/update")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		updateParams.Password = string(hashedPassword)
+	if err := database.UpdateUser(c.Request.Context(), user.(database.User).ID, updateParams); err != nil {
+		slog.Error("error updating user.", "error", err.Error(), "userID")
 	}
-	// update user
-	updateParams.ID = user.ID
-	user, err = queries.UpdateUser(c.Request.Context(), updateParams)
-	if err != nil {
-		slog.Error("failed to update user.", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"message": "user updated", "user": user})
+	c.JSON(http.StatusOK, gin.H{"message": "user updated"})
 }
 
 func getLinkToken(c *gin.Context) {
-	userID, _ := c.Get("userID")
+	user, _ := c.Get("user")
 	plaidClient := utils.GetPlaidClient()
 	config := utils.GetConfig()
 
-	user := plaid.NewLinkTokenCreateRequestUser(userID.(string))
+	requestUser := plaid.NewLinkTokenCreateRequestUser(user.(database.User).ID)
 
 	request := plaid.NewLinkTokenCreateRequest(
 		"Purch",
@@ -198,7 +163,7 @@ func getLinkToken(c *gin.Context) {
 		config.GetPlaidCountryCodes(),
 	)
 
-	request.SetUser(*user)
+	request.SetUser(*requestUser)
 	request.SetProducts(config.GetPlaidProducts())
 	request.SetRedirectUri(config.PlaidRedirectUri)
 
@@ -219,7 +184,7 @@ func getLinkToken(c *gin.Context) {
 }
 
 func exchangePublicToken(c *gin.Context) {
-	userID, _ := c.Get("userID")
+	user, _ := c.Get("user")
 	plaidClient := utils.GetPlaidClient()
 
 	publicToken := c.Query("public_token")
@@ -241,7 +206,7 @@ func exchangePublicToken(c *gin.Context) {
 
 	accessToken, ok := resp.GetAccessTokenOk()
 	if !ok {
-		slog.Error("no access token present after exchanging with public token.")
+		slog.Error("no access token present after exchanging with public token.", "userID", user.(database.User).ID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "no access token provided"})
 		return
 	}
@@ -258,13 +223,13 @@ func exchangePublicToken(c *gin.Context) {
 	go func() {
 		if err := tasks.SyncItemAccountsTransactionsPipeline(
 			c.Request.Context(),
-			userID.(string),
+			user.(database.User).ID,
 			*itemID,
 			*accessToken,
 		); err != nil {
 			slog.Error("error with item->accounts->transactions initial sync pipeline.", "error", err.Error())
 		} else {
-			slog.Info("successfully synced all accounts and transactions.", "itemID", *itemID, "userID", userID)
+			slog.Info("successfully synced all accounts and transactions.", "itemID", *itemID, "userID", user.(database.User).ID)
 		}
 	}()
 

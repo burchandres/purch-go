@@ -71,37 +71,37 @@ type Transaction struct {
 
 // -------- Update Schemas --------
 
-type UpdateUser struct {
-	FirstName  *string
-	LastName   *string
-	Username   *string
-	Password   *string
-	Income     *float64
-	IncomeRate *string
+type UpdateUserParams struct {
+	FirstName  *string  `json:"first_name,omitempty"`
+	LastName   *string  `json:"last_name,omitempty"`
+	Username   *string  `json:"username,omitempty"`
+	Password   *string  `json:"password,omitempty"`
+	Income     *float64 `json:"income,omitempty"`
+	IncomeRate *string  `json:"income_rate,omitempty"`
 }
 
-type UpdateCategory struct {
-	Label             *string
-	CurrentSpending   *float64
-	AllocatedSpending *float64
+type UpdateCategoryParams struct {
+	Label             *string  `json:"label,omitempty"`
+	CurrentSpending   *float64 `json:"current_spending,omitempty"`
+	AllocatedSpending *float64 `json:"allocated_spending,omitempty"`
 }
 
-type UpdateItem struct {
-	AccessToken       *string
-	Name              *string
-	TransactionCursor *string
+type UpdateItemParams struct {
+	AccessToken       *string `json:"access_token,omitempty"`
+	Name              *string `json:"name,omitempty"`
+	TransactionCursor *string `json:"transaction_cursor,omitempty"`
 }
 
-type UpdateAccount struct {
-	Name *string
+type UpdateAccountParams struct {
+	Name *string `json:"name,omitempty"`
 }
 
-type UpdateTransaction struct {
-	CategoryLabel  *string
-	AuthorizedDate *time.Time
-	SettledDate    *time.Time
-	Merchant       *string
-	Amount         *float64
-	CurrencyCode   *string
-	Pending        *bool
+type UpdateTransactionParams struct {
+	CategoryLabel  *string    `json:"category_label,omitempty"`
+	AuthorizedDate *time.Time `json:"authorized_date,omitempty"`
+	SettledDate    *time.Time `json:"settled_date,omitempty"`
+	Merchant       *string    `json:"merchant,omitempty"`
+	Amount         *float64   `json:"amount,omitempty"`
+	CurrencyCode   *string    `json:"currency_code,omitempty"`
+	Pending        *bool      `json:"pending,omitempty"`
 }

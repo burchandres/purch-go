@@ -9,6 +9,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+
+	"purch/database"
 )
 
 // Secret key for signing tokens (in production, load from environment)
@@ -70,7 +72,7 @@ func authMiddleware() gin.HandlerFunc {
 		// Get token from cookie
 		tokenString, err := c.Cookie("purch_token")
 		if err != nil {
-			slog.Error("Missing purch token")
+			slog.Error("missing purch token")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing purch token"})
 			c.Abort()
 			return
@@ -79,7 +81,7 @@ func authMiddleware() gin.HandlerFunc {
 		// Parse and validate token
 		claims, err := parseToken(tokenString)
 		if err != nil {
-			slog.Error("Invalid purch token", "error", err)
+			slog.Error("invalid purch token", "error", err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid purch token"})
 			c.Abort()
 			return
@@ -94,8 +96,12 @@ func authMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		// Store userID in context for use in handlers
-		c.Set("userID", claims.UserID)
+		// Store user in context for use in handlers
+		user, err := database.GetUserByID(c.Request.Context(), claims.UserID)
+		if err != nil {
+			slog.Error("error getting user from db.", "error", err.Error(), "userID", claims.UserID, "endpoint", c.Request.URL)
+		}
+		c.Set("user", user)
 		slog.Debug("user authenticated and userID context set.", "userID", claims.UserID, "endpoint", c.Request.URL)
 
 		c.Next()
