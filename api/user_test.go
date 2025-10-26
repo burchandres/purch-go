@@ -60,6 +60,142 @@ func makeRequest(
 	return resp
 }
 
+// Helper to register a new user, login, and return credentials + cookie
+func registerLoginAndGetCookie(t *testing.T) (username, password string, cookie *http.Cookie) {
+	test_id := uuid.NewString()[:6]
+	username = "testuser_" + test_id
+	password = "testpass123"
+	
+	// Register the user
+	registerUrl := userServiceUrl + "/register"
+	userPayload := map[string]any{
+		"first_name":  "Test",
+		"last_name":   "User",
+		"username":    username,
+		"password":    password,
+		"income":      1000,
+		"income_rate": "weekly",
+	}
+	
+	registerResp := makeRequest(t, client, http.MethodPost, registerUrl, userPayload)
+	require.Equal(t, http.StatusCreated, registerResp.StatusCode, "Failed to register test user")
+	
+	// Login and get cookie
+	loginUrl := userServiceUrl + "/login"
+	loginPayload := map[string]any{
+		"username": username,
+		"password": password,
+	}
+	
+	loginResp := makeRequest(t, client, http.MethodPost, loginUrl, loginPayload)
+	require.Equal(t, http.StatusOK, loginResp.StatusCode, "Failed to login test user")
+	
+	// Extract the purch_token cookie
+	var sessionCookie *http.Cookie
+	for _, cookie := range loginResp.Cookies() {
+		if cookie.Name == "purch_token" {
+			sessionCookie = cookie
+			break
+		}
+	}
+	require.NotNil(t, sessionCookie, "purch_token cookie should be set")
+	
+	// Cleanup
+	t.Cleanup(func() {
+		// Optional: delete user from database
+		// database.DeleteUserByUsername(context.Background(), username)
+	})
+	
+	return username, password, sessionCookie
+}
+
+// If you didn't add this earlier
+func registerLoginWithData(t *testing.T, userData map[string]any) (username, password string, cookie *http.Cookie) {
+	test_id := uuid.NewString()[:6]
+	username = "testuser_" + test_id
+	password = "testpass123"
+	
+	// Default payload
+	registerUrl := userServiceUrl + "/register"
+	userPayload := map[string]any{
+		"first_name":  "Test",
+		"last_name":   "User",
+		"username":    username,
+		"password":    password,
+		"income":      1000,
+		"income_rate": "weekly",
+	}
+	
+	// Override with custom data
+	for k, v := range userData {
+		userPayload[k] = v
+	}
+	
+	registerResp := makeRequest(t, client, http.MethodPost, registerUrl, userPayload)
+	require.Equal(t, http.StatusCreated, registerResp.StatusCode)
+	
+	_, _, cookie = registerLoginAndGetCookie(t)
+	
+	t.Cleanup(func() {
+		// database.DeleteUserByUsername(context.Background(), username)
+	})
+	
+	return username, password, cookie
+}
+
+func loginAndGetCookie(t *testing.T, username, password string) *http.Cookie {
+	// Login and get cookie
+	loginUrl := userServiceUrl + "/login"
+	loginPayload := map[string]any{
+		"username": username,
+		"password": password,
+	}
+	
+	loginResp := makeRequest(t, client, http.MethodPost, loginUrl, loginPayload)
+	require.Equal(t, http.StatusOK, loginResp.StatusCode, "Failed to login test user")
+	
+	// Extract the purch_token cookie
+	var sessionCookie *http.Cookie
+	for _, cookie := range loginResp.Cookies() {
+		if cookie.Name == "purch_token" {
+			sessionCookie = cookie
+			break
+		}
+	}
+	require.NotNil(t, sessionCookie, "purch_token cookie should be set")
+	
+	// Cleanup
+	t.Cleanup(func() {
+		// Optional: delete user from database
+		// database.DeleteUserByUsername(context.Background(), username)
+	})
+	
+	return sessionCookie
+}
+
+// Helper to make authenticated requests
+func makeAuthenticatedRequest(
+	t *testing.T,
+	client *http.Client,
+	method string,
+	url string,
+	payload map[string]any,
+	cookie *http.Cookie,
+) *http.Response {
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
+	
+	req, err := http.NewRequestWithContext(context.Background(), method, url, bytes.NewBuffer(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(cookie) // Add the session cookie
+	
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	
+	return resp
+}
+
 func TestMain(m *testing.M) {
 	client = &http.Client{
 		Timeout: 5 * time.Second,
@@ -239,3 +375,226 @@ func TestLoginUser_MissingCredentials(t *testing.T) {
 		})
 	}
 }
+
+func TestGetUserInfo_Success(t *testing.T) {
+	// Register and login to get authenticated cookie
+	username, _, cookie := registerLoginAndGetCookie(t)
+	
+	// Make authenticated request to /user/info
+	userInfoUrl := userServiceUrl + "/info"
+	resp := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, cookie)
+	
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	
+	// Parse and validate response
+	respPayload := parseResponse(t, resp)
+	assert.Equal(t, username, respPayload["username"])
+	assert.Equal(t, "Test", respPayload["first_name"])
+	assert.Equal(t, "User", respPayload["last_name"])
+	assert.Equal(t, float64(1000), respPayload["income"])
+	assert.Equal(t, "weekly", respPayload["income_rate"])
+	assert.NotEmpty(t, respPayload["id"], "User ID should be present")
+}
+
+func TestGetUserInfo_Unauthorized_NoCookie(t *testing.T) {
+	// Try to access /user/info without authentication
+	userInfoUrl := userServiceUrl + "/info"
+	resp := makeRequest(t, client, http.MethodGet, userInfoUrl, nil)
+	
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestGetUserInfo_Unauthorized_InvalidToken(t *testing.T) {
+	// Try with an invalid JWT token
+	userInfoUrl := userServiceUrl + "/info"
+	
+	invalidCookie := &http.Cookie{
+		Name:  "purch_token",
+		Value: "invalid.jwt.token",
+	}
+	
+	resp := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, invalidCookie)
+	
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestLogout_Success(t *testing.T) {
+	// Register and login to get authenticated cookie
+	_, _, cookie := registerLoginAndGetCookie(t)
+	
+	// Verify we can access protected endpoint before logout
+	userInfoUrl := userServiceUrl + "/info"
+	infoResp := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, cookie)
+	assert.Equal(t, http.StatusOK, infoResp.StatusCode, "Should be able to access user info before logout")
+	
+	// Logout
+	logoutUrl := userServiceUrl + "/logout"
+	logoutResp := makeAuthenticatedRequest(t, client, http.MethodPost, logoutUrl, nil, cookie)
+	
+	assert.Equal(t, http.StatusOK, logoutResp.StatusCode)
+	
+	// Verify response message
+	respPayload := parseResponse(t, logoutResp)
+	assert.Contains(t, respPayload["message"], "logout successful")
+	
+	// Verify cookie is cleared (should have MaxAge=-1 or be empty)
+	var clearedCookie *http.Cookie
+	for _, c := range logoutResp.Cookies() {
+		if c.Name == "purch_token" {
+			clearedCookie = c
+			break
+		}
+	}
+	
+	require.NotNil(t, clearedCookie, "purch_token cookie should be present in logout response")
+	assert.Equal(t, "", clearedCookie.Value, "Cookie value should be empty")
+	assert.Equal(t, -1, clearedCookie.MaxAge, "Cookie MaxAge should be -1 to delete it")
+	
+	// TODO: uncomment when tokens get blacklisted
+	// // Try to access protected endpoint with old cookie (should fail)
+	// infoRespAfterLogout := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, cookie)
+	// assert.Equal(t, http.StatusUnauthorized, infoRespAfterLogout.StatusCode, "Should not be able to access user info after logout")
+}
+
+func TestLogout_WithoutAuthentication(t *testing.T) {
+	// Try to logout without being logged in
+	logoutUrl := userServiceUrl + "/logout"
+	resp := makeRequest(t, client, http.MethodPost, logoutUrl, nil)
+	
+	// Depending on your middleware, this might be 401 or 200
+	// If logout doesn't require auth, it should return 200
+	// If it requires auth middleware, it should return 401
+	assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
+}
+
+func TestLogout_InvalidToken(t *testing.T) {
+	logoutUrl := userServiceUrl + "/logout"
+	
+	invalidCookie := &http.Cookie{
+		Name:  "purch_token",
+		Value: "invalid.jwt.token",
+	}
+	
+	resp := makeAuthenticatedRequest(t, client, http.MethodPost, logoutUrl, nil, invalidCookie)
+	
+	// Should either return 401 (if auth middleware blocks) or 200 (if logout always succeeds)
+	assert.NotEqual(t, http.StatusInternalServerError, resp.StatusCode)
+}
+
+func TestLogout_MultipleTimes(t *testing.T) {
+	// Register and login
+	_, _, cookie := registerLoginAndGetCookie(t)
+	
+	logoutUrl := userServiceUrl + "/logout"
+	
+	// First logout - should succeed
+	logoutResp1 := makeAuthenticatedRequest(t, client, http.MethodPost, logoutUrl, nil, cookie)
+	assert.Equal(t, http.StatusOK, logoutResp1.StatusCode)
+	
+	// Second logout with same (now invalid) cookie
+	// Should either return 401 or 200 depending on implementation
+	logoutResp2 := makeAuthenticatedRequest(t, client, http.MethodPost, logoutUrl, nil, cookie)
+	assert.NotEqual(t, http.StatusInternalServerError, logoutResp2.StatusCode)
+}
+
+func TestLogout_ThenLoginAgain(t *testing.T) {
+	// Register and login
+	username, password, cookie := registerLoginAndGetCookie(t)
+	
+	// Logout
+	logoutUrl := userServiceUrl + "/logout"
+	logoutResp := makeAuthenticatedRequest(t, client, http.MethodPost, logoutUrl, nil, cookie)
+	assert.Equal(t, http.StatusOK, logoutResp.StatusCode)
+	
+	// Login again with same credentials
+	newCookie := loginAndGetCookie(t, username, password)
+	assert.NotNil(t, newCookie)
+	assert.NotEmpty(t, newCookie.Value)
+	
+	// Verify can access protected endpoint with new cookie
+	userInfoUrl := userServiceUrl + "/info"
+	infoResp := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, newCookie)
+	assert.Equal(t, http.StatusOK, infoResp.StatusCode)
+}
+
+func TestLogout_DifferentUsers(t *testing.T) {
+	// Create two users
+	_, _, cookie1 := registerLoginAndGetCookie(t)
+	username2, _, cookie2 := registerLoginAndGetCookie(t)
+	
+	logoutUrl := userServiceUrl + "/logout"
+	
+	// User 1 logs out
+	logoutResp1 := makeAuthenticatedRequest(t, client, http.MethodPost, logoutUrl, nil, cookie1)
+	assert.Equal(t, http.StatusOK, logoutResp1.StatusCode)
+	
+	// TODO: uncomment when tokens get blacklisted
+	// // User 1 can no longer access protected endpoints
+	userInfoUrl := userServiceUrl + "/info"
+	// infoResp1 := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, cookie1)
+	// assert.Equal(t, http.StatusUnauthorized, infoResp1.StatusCode)
+	
+	// User 2 should still be able to access protected endpoints
+	infoResp2 := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, cookie2)
+	assert.Equal(t, http.StatusOK, infoResp2.StatusCode)
+	
+	respPayload := parseResponse(t, infoResp2)
+	assert.Equal(t, username2, respPayload["username"])
+}
+
+func TestLogout_CookieAttributes(t *testing.T) {
+	// Register and login
+	_, _, cookie := registerLoginAndGetCookie(t)
+	
+	// Logout
+	logoutUrl := userServiceUrl + "/logout"
+	logoutResp := makeAuthenticatedRequest(t, client, http.MethodPost, logoutUrl, nil, cookie)
+	
+	assert.Equal(t, http.StatusOK, logoutResp.StatusCode)
+	
+	// Check cookie attributes are correct
+	var clearedCookie *http.Cookie
+	for _, c := range logoutResp.Cookies() {
+		if c.Name == "purch_token" {
+			clearedCookie = c
+			break
+		}
+	}
+	
+	require.NotNil(t, clearedCookie)
+	assert.Equal(t, "purch_token", clearedCookie.Name)
+	assert.Equal(t, "", clearedCookie.Value)
+	assert.Equal(t, -1, clearedCookie.MaxAge)
+	assert.Equal(t, "/", clearedCookie.Path)
+	assert.Equal(t, "localhost", clearedCookie.Domain)
+	assert.True(t, clearedCookie.HttpOnly, "Cookie should be HttpOnly")
+	assert.False(t, clearedCookie.Secure, "Cookie Secure flag should match login")
+}
+
+// TODO: uncomment when token blacklisting is implemented
+// func TestLogout_VerifyTokenInvalidated(t *testing.T) {
+// 	// Register and login
+// 	_, _, cookie := registerLoginAndGetCookie(t)
+	
+// 	// Store the original token value
+// 	originalToken := cookie.Value
+// 	assert.NotEmpty(t, originalToken)
+	
+// 	// Logout
+// 	logoutUrl := userServiceUrl + "/logout"
+// 	logoutResp := makeAuthenticatedRequest(t, client, http.MethodPost, logoutUrl, nil, cookie)
+// 	assert.Equal(t, http.StatusOK, logoutResp.StatusCode)
+	
+// 	// Try to use the original token after logout
+// 	userInfoUrl := userServiceUrl + "/info"
+	
+// 	// Recreate cookie with original token
+// 	oldCookie := &http.Cookie{
+// 		Name:  "purch_token",
+// 		Value: originalToken,
+// 	}
+	
+	
+// 	infoResp := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, oldCookie)
+// 	assert.Equal(t, http.StatusUnauthorized, infoResp.StatusCode, "Old token should not work after logout")
+// }
