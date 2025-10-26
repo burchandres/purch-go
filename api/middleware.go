@@ -36,7 +36,7 @@ func createToken(userID string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(config.SecretKey)
+	tokenString, err := token.SignedString([]byte(config.SecretKey))
 	if err != nil {
 		return "", err
 	}
@@ -53,7 +53,7 @@ func parseToken(tokenString string) (*Claims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return config.SecretKey, nil
+		return []byte(config.SecretKey), nil
 	})
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func authMiddleware() gin.HandlerFunc {
 		// Parse and validate token
 		claims, err := parseToken(tokenString)
 		if err != nil {
-			slog.Error("invalid purch token", "error", err)
+			slog.Error("invalid purch token", "error", err.Error(), "endpoint", c.Request.URL)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid purch token"})
 			c.Abort()
 			return

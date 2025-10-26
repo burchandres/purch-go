@@ -1,10 +1,8 @@
 package api
 
 import (
-	// "database/sql"
 	"log/slog"
 	"net/http"
-	// "errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/plaid/plaid-go/v40/plaid"
@@ -26,7 +24,7 @@ func SetupUserEndpoints(r *gin.Engine) {
 		protected.GET("/logout", logout)
 		protected.PUT("/update", updateUser)
 		protected.GET("/link-token", getLinkToken)
-		// protected.POST("/exchange-public-token", exchangePublicToken)
+		protected.POST("/exchange-public-token", exchangePublicToken)
 		protected.DELETE("/delete", deleteUser)
 	}
 }
@@ -132,7 +130,8 @@ func deleteUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "user deleted"})
+	logout(c)
+	c.JSON(http.StatusOK, gin.H{"message": "user deleted and cookie session cleared"})
 }
 
 func updateUser(c *gin.Context) {
@@ -143,11 +142,13 @@ func updateUser(c *gin.Context) {
 	// get update params from request body
 	if err := c.BindJSON(&updateParams); err != nil {
 		slog.Error("error binding update params.", "error", err.Error(), "userID", userID)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "error reading update params"})
 		return
 	}
 	if err := database.UpdateUser(c.Request.Context(), userID, updateParams); err != nil {
-		slog.Error("error updating user.", "error", err.Error(), "userID")
+		slog.Error("error updating user.", "error", err.Error(), "userID", userID)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error updating user"})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "user updated successfully"})
 }

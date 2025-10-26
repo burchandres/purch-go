@@ -42,7 +42,5 @@ tasks:
 
   # ------- Test ------- 
   test:
-    aliases:
-      - test-unit
     cmds:
-      - ./test/test_endpoints.sh
+      - go test ./...

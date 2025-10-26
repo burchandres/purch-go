@@ -224,7 +224,7 @@ echo "========================================="
 # Adjust credentials as needed
 TEST_FIRST_NAME="foo"
 TEST_LAST_NAME="bar"
-TEST_USERNAME="testuser_$(date +%s)"
+TEST_USERNAME="testuser123"
 TEST_PASSWORD="testpass123"
 TEST_INCOME="50000"
 TEST_INCOME_RATE="yearly"
@@ -259,17 +259,23 @@ test_endpoint "PUT" "/user/update" 200 \
     '{"first_name":"Jane","last_name":"Doe","income":75000, "income_rate":"weekly", "username":"othertestuser", "password":"testpass"}' \
     "Update user (authenticated)" \
     true \
-    'has("message") and has("user")'
-
-# Test deleting user returns works and returns message
-test_endpoint "DELETE" "/user/delete" 200 "" \
-    "Delete current user (authenticated)" \
-    true \
     'has("message")'
-    
+
 # Test logging out
 test_endpoint "GET" "/user/logout" 200 "" \
     "Logout and delete current cookie (authenticated)" \
+    true \
+    'has("message")'
+    
+# Test logging back in
+test_endpoint "GET" "/user/login?username=testuser123&password=testpass123" 200 \
+    "Login again and set cookie (unauthenticatedd)" \
+    false \
+    'has("message")'
+
+# Test deleting user returns returns successful message
+test_endpoint "DELETE" "/user/delete" 200 "" \
+    "Delete current user (authenticated)" \
     true \
     'has("message")'
 

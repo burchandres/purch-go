@@ -30,7 +30,7 @@ func GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 }
 
 func StoreUser(ctx context.Context, user User) error {
-	return db.NewInsert().Model(user).Scan(ctx)
+	return db.NewInsert().Model(&user).Scan(ctx)
 }
 
 func UpdateUser(ctx context.Context, id uuid.UUID, updateParams UpdateUserParams) error {
@@ -63,7 +63,7 @@ func UpdateUser(ctx context.Context, id uuid.UUID, updateParams UpdateUserParams
 
 func DeleteUser(ctx context.Context, user User) error {
 	_, err := db.NewDelete().
-		Model(user).
+		Model(&user).
 		WherePK().
 		Exec(ctx)
 	return err
@@ -81,7 +81,7 @@ func GetItem(ctx context.Context, id string) (Item, error) {
 }
 
 func StoreItem(ctx context.Context, item Item) error {
-	return db.NewInsert().Model(item).Scan(ctx)
+	return db.NewInsert().Model(&item).Scan(ctx)
 }
 
 // -------- Account Queries --------

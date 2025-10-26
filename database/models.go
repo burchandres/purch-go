@@ -10,28 +10,28 @@ import (
 // -------- Core Schemas --------
 
 type User struct {
-	bun.BaseModel `bun:"table:users,alias:u"`
+	bun.BaseModel `bun:"table:users,alias:u" json:"-"`
 
-	ID         uuid.UUID `bun:",pk,type:uuid,default:gen_random_uuid()"`
-	FirstName  string    `bun:"first_name,notnull"`
-	LastName   string    `bun:"last_name,notnull"`
-	Username   string    `bun:",unique,notnull"`
-	Password   string    `bun:",notnull"`
-	Income     *float64  `bun:"type:numeric"`
-	IncomeRate *string   `bun:"income_rate"`
+	ID         uuid.UUID `bun:"id,pk,type:uuid,default:gen_random_uuid()" json:"id"`
+	FirstName  string    `bun:"first_name,notnull" json:"first_name"`
+	LastName   string    `bun:"last_name,notnull" json:"last_name"`
+	Username   string    `bun:"username,unique,notnull" json:"username"`
+	Password   string    `bun:"password,notnull" json:"password"`
+	Income     *float64  `bun:"income,type:numeric" json:"income,omitempty"`
+	IncomeRate *string   `bun:"income_rate" json:"income_rate,omitempty"`
 
-	Categories []*Category `bun:"rel:has-many,join:id=user_id"`
-	Items      []*Item     `bun:"rel:has-many,join:id=user_id"`
+	Categories []*Category `bun:"rel:has-many,join:id=user_id" json:"-"`
+	Items      []*Item     `bun:"rel:has-many,join:id=user_id" json:"-"`
 }
 
 type Category struct {
 	bun.BaseModel `bun:"table:categories,alias:c"`
 
-	ID                uuid.UUID `bun:",pk,type:uuid,default:gen_random_uuid()"`
-	UserID            uuid.UUID `bun:",type:uuid,notnull"`
+	ID                uuid.UUID `bun:"id,pk,type:uuid,default:gen_random_uuid()"`
+	UserID            uuid.UUID `bun:"user_id,type:uuid,notnull"`
 	Label             string    `bun:",notnull"`
-	CurrentSpending   float64   `bun:"type:numeric,notnull,default:0"`
-	AllocatedSpending float64   `bun:"type:numeric,notnull"`
+	CurrentSpending   float64   `bun:"current_spending,type:numeric,notnull,default:0"`
+	AllocatedSpending float64   `bun:"allocated_spending,type:numeric,notnull"`
 
 	User *User `bun:"rel:belongs-to,join:user_id=id"`
 }
@@ -39,8 +39,8 @@ type Category struct {
 type Item struct {
 	bun.BaseModel `bun:"table:items,alias:i"`
 
-	ID                string    `bun:",pk"`
-	UserID            uuid.UUID `bun:",type:uuid,notnull"`
+	ID                string    `bun:"id,pk"`
+	UserID            uuid.UUID `bun:"user_id,type:uuid,notnull"`
 	AccessToken       string    `bun:"access_token,notnull"`
 	Name              string    `bun:",notnull"`
 	TransactionCursor string    `bun:"transaction_cursor,notnull,default:''"`
@@ -52,9 +52,9 @@ type Item struct {
 type Account struct {
 	bun.BaseModel `bun:"table:accounts,alias:a"`
 
-	ID     string `bun:",pk"`
+	ID     string `bun:"id,pk"`
 	ItemID string `bun:"item_id,notnull"`
-	Name   string `bun:",notnull"`
+	Name   string `bun:"name,notnull"`
 
 	Item         *Item          `bun:"rel:belongs-to,join:item_id=id"`
 	Transactions []*Transaction `bun:"rel:has-many,join:id=account_id"`
@@ -63,7 +63,7 @@ type Account struct {
 type Transaction struct {
 	bun.BaseModel `bun:"table:transactions,alias:t"`
 
-	ID             string     `bun:",pk"`
+	ID             string     `bun:"id,pk"`
 	AccountID      string     `bun:"account_id,notnull"`
 	CategoryLabel  *string    `bun:"category_label"`
 	AuthorizedDate time.Time  `bun:"authorized_date,notnull,default:current_date"`
@@ -71,7 +71,7 @@ type Transaction struct {
 	Merchant       *string    `bun:"merchant"`
 	Amount         float64    `bun:"type:numeric,notnull,default:0"`
 	CurrencyCode   *string    `bun:"currency_code"`
-	Pending        bool       `bun:",notnull,default:false"`
+	Pending        bool       `bun:"pending,notnull,default:false"`
 
 	Account *Account `bun:"rel:belongs-to,join:account_id=id"`
 }

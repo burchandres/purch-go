@@ -130,7 +130,7 @@ func SyncTransactions(
 type TransactionsWorker struct {
 	itemID      string
 	accessToken string
-	cursor 		string
+	cursor      string
 
 	addedChan    chan []plaid.Transaction
 	modifiedChan chan []plaid.Transaction
@@ -139,11 +139,11 @@ type TransactionsWorker struct {
 
 func NewTransactionsWorker(itemID, accessToken, cursor string) *TransactionsWorker {
 	return &TransactionsWorker{
-		itemID: itemID,
-		accessToken: accessToken,
-		addedChan: make(chan []plaid.Transaction),
+		itemID:       itemID,
+		accessToken:  accessToken,
+		addedChan:    make(chan []plaid.Transaction),
 		modifiedChan: make(chan []plaid.Transaction),
-		removedChan: make(chan []plaid.RemovedTransaction),
+		removedChan:  make(chan []plaid.RemovedTransaction),
 	}
 }
 

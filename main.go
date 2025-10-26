@@ -16,18 +16,27 @@ import (
 	"purch/utils"
 )
 
+var slogLevels = map[string]slog.Level{
+	"DEBUG": slog.LevelDebug,
+	"INFO":  slog.LevelInfo,
+	"WARN":  slog.LevelWarn,
+	"ERROR": slog.LevelError,
+}
+
 func main() {
 	// get service configurations
 	config := utils.GetConfig()
-	slog.Info("loaded config.", "config", *config)
+	// configure logging with config.LogLevel
+	configureLogging(config.LogLevel)
+	slog.Debug("loaded config.", "config", *config)
 
 	// setup database connection pool
-	if err := database.Init(config.GetPostgresURL()); err != nil {
+	if err := database.Init(config.PostgresUrl); err != nil {
 		panic(err)
 	}
 	defer database.Close()
 	slog.Info("initialized database pool.")
-	
+
 	// get API server
 	server := getServer()
 	// run server
@@ -36,7 +45,7 @@ func main() {
 			panic(err)
 		}
 	}()
-	
+
 	// watch for shutdown signals
 	signalChan := make(chan os.Signal, 1)
 
@@ -50,6 +59,17 @@ func main() {
 		slog.Info("error shutting down server.", "error", err.Error())
 	}
 	slog.Info("shutdown complete.")
+}
+
+func configureLogging(logLevel string) {
+	logger := slog.New(slog.NewTextHandler(
+		os.Stdout,
+		&slog.HandlerOptions{
+			Level: slogLevels[logLevel],
+		},
+	),
+	)
+	slog.SetDefault(logger)
 }
 
 func getServer() *http.Server {
