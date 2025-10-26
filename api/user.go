@@ -15,13 +15,13 @@ import (
 
 func SetupUserEndpoints(r *gin.Engine) {
 	r.POST("/user/register", registerUser)
-	r.GET("/user/login", setUserCookie)
+	r.POST("/user/login", setUserCookie)
 
 	protected := r.Group("/user")
 	protected.Use(authMiddleware())
 	{
 		protected.GET("/info", getUserInfo)
-		protected.GET("/logout", logout)
+		protected.POST("/logout", logout)
 		protected.PUT("/update", updateUser)
 		protected.GET("/link-token", getLinkToken)
 		protected.POST("/exchange-public-token", exchangePublicToken)
@@ -63,24 +63,32 @@ func registerUser(c *gin.Context) {
 }
 
 func setUserCookie(c *gin.Context) {
-	// get user from db with provided username and password
-	username := c.Query("username")
-	slog.Info("setting cookie for user.", "username", username)
-	user, err := database.GetUserByUsername(c.Request.Context(), username)
-	userID := user.ID.String()
-	if err != nil {
-		slog.Error("user with provided username does not exist.", "error", err.Error(), "userID", userID)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "user with provided username does not exist"})
+	// pull provided user credentials for verifying login
+	var credentials struct {
+		Username string `json:"username" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+	if err := c.BindJSON(&credentials); err != nil {
+		slog.Error("error pulling user credentials from body", "error", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ill structured user credentials provided"})
 		return
 	}
+	// get user from db with provided username and password
+	user, err := database.GetUserByUsername(c.Request.Context(), credentials.Username)
+	if err != nil {
+		slog.Error("user with provided username does not exist.", "error", err.Error(), "username", credentials.Username)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user with provided username does not exist"})
+		return
+	}
+	userID := user.ID.String()
 	// verify provided password
-	password := c.Query("password")
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(credentials.Password)); err != nil {
 		slog.Error("incorrect password provided.", "error", err.Error(), "userID", userID)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect password provided."})
 		return
 	}
 	// create jwt token for user to set in cookie
+	slog.Debug("setting cookie for user.", "username", credentials.Username)
 	token, err := createToken(userID)
 	if err != nil {
 		slog.Error("failed to create token.", "error", err.Error(), "userID", userID)
@@ -97,6 +105,7 @@ func setUserCookie(c *gin.Context) {
 		false,
 		true,
 	)
+	slog.Debug("user logged in successfully", "userID", userID)
 	c.JSON(http.StatusOK, gin.H{"message": "user cookie set"})
 }
 
