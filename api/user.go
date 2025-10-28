@@ -23,8 +23,8 @@ func SetupUserEndpoints(r *gin.Engine) {
 		protected.GET("/info", getUserInfo)
 		protected.POST("/logout", logout)
 		protected.PUT("/update", updateUser)
-		protected.GET("/link-token", getLinkToken)
 		protected.DELETE("/delete", deleteUser)
+		protected.GET("/link-token", getLinkToken)
 		protected.POST("/exchange-public-token", exchangePublicToken)
 	}
 }
@@ -117,6 +117,11 @@ func getUserInfo(c *gin.Context) {
 
 func logout(c *gin.Context) {
 	// delete cookie for user
+	deleteCookie(c)
+	c.JSON(http.StatusOK, gin.H{"message": "logout successful, cookie cleared"})
+}
+
+func deleteCookie(c *gin.Context) {
 	c.SetCookie(
 		"purch_token",
 		"",
@@ -126,20 +131,19 @@ func logout(c *gin.Context) {
 		false,
 		true,
 	)
-	c.JSON(http.StatusOK, gin.H{"message": "logout successful, cookie cleared"})
 }
 
 // TODO: call `/item/remove` Plaid endpoint to cancel associated access tokens to prevent unnecessary billing
 func deleteUser(c *gin.Context) {
 	// get user id from context
-	user, _ := c.Get("user")
+	user, _ := c.Get("user")	
 	// delete user from db
 	if err := database.DeleteUser(c.Request.Context(), user.(database.User)); err != nil {
 		slog.Error("failed to delete user.", "error", err, "userID", user.(database.User).ID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	logout(c)
+	deleteCookie(c)
 	c.JSON(http.StatusOK, gin.H{"message": "user deleted and cookie session cleared"})
 }
 

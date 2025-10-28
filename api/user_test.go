@@ -109,9 +109,8 @@ func registerLoginAndGetCookie(t *testing.T) (username, password string, cookie 
 	return username, password, sessionCookie
 }
 
-// If you didn't add this earlier
 func registerLoginWithData(t *testing.T, userData map[string]any) (username, password string, cookie *http.Cookie) {
-	test_id := uuid.NewString()[:6]
+	test_id := uuid.NewString()[:8]
 	username = "testuser_" + test_id
 	password = "testpass123"
 	
@@ -598,3 +597,275 @@ func TestLogout_CookieAttributes(t *testing.T) {
 // 	infoResp := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, oldCookie)
 // 	assert.Equal(t, http.StatusUnauthorized, infoResp.StatusCode, "Old token should not work after logout")
 // }
+
+func TestDeleteUser_Success(t *testing.T) {
+	username, _, cookie := registerLoginAndGetCookie(t)
+	
+	// Verify user exists before deletion
+	userInfoUrl := userServiceUrl + "/info"
+	infoResp := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, cookie)
+	assert.Equal(t, http.StatusOK, infoResp.StatusCode)
+	
+	// Delete user
+	deleteUrl := userServiceUrl + "/delete"
+	deleteResp := makeAuthenticatedRequest(t, client, http.MethodDelete, deleteUrl, nil, cookie)
+	
+	assert.Equal(t, http.StatusOK, deleteResp.StatusCode)
+	
+	// Verify response message
+	respPayload := parseResponse(t, deleteResp)
+	assert.Contains(t, respPayload["message"], "user deleted")
+	assert.Contains(t, respPayload["message"], "cookie session cleared")
+	
+	// Verify cookie is cleared
+	var clearedCookie *http.Cookie
+	for _, c := range deleteResp.Cookies() {
+		if c.Name == "purch_token" {
+			clearedCookie = c
+			break
+		}
+	}
+	require.NotNil(t, clearedCookie, "Cookie should be cleared")
+	assert.Equal(t, "", clearedCookie.Value)
+	assert.Equal(t, -1, clearedCookie.MaxAge)
+	
+	// // Try to access user info with old cookie (should fail)
+	// infoRespAfter := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, cookie)
+	// assert.Equal(t, http.StatusUnauthorized, infoRespAfter.StatusCode)
+	
+	// Try to login with deleted user credentials (should fail)
+	loginUrl := userServiceUrl + "/login"
+	loginPayload := map[string]any{
+		"username": username,
+		"password": "testpass123",
+	}
+	loginResp := makeRequest(t, client, http.MethodPost, loginUrl, loginPayload)
+	assert.Equal(t, http.StatusUnauthorized, loginResp.StatusCode)
+}
+
+func TestDeleteUser_Unauthorized_NoCookie(t *testing.T) {
+	// Try to delete without authentication
+	deleteUrl := userServiceUrl + "/delete"
+	resp := makeRequest(t, client, http.MethodDelete, deleteUrl, nil)
+	
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestDeleteUser_Unauthorized_InvalidToken(t *testing.T) {
+	deleteUrl := userServiceUrl + "/delete"
+	
+	invalidCookie := &http.Cookie{
+		Name:  "purch_token",
+		Value: "invalid.jwt.token",
+	}
+	
+	resp := makeAuthenticatedRequest(t, client, http.MethodDelete, deleteUrl, nil, invalidCookie)
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+// TOOD: blacklist expired
+// func TestDeleteUser_CannotAccessAfterDeletion(t *testing.T) {
+// 	_, _, cookie := registerLoginAndGetCookie(t)
+	
+// 	// Delete user
+// 	deleteUrl := userServiceUrl + "/delete"
+// 	deleteResp := makeAuthenticatedRequest(t, client, http.MethodDelete, deleteUrl, nil, cookie)
+// 	assert.Equal(t, http.StatusOK, deleteResp.StatusCode)
+	
+// 	// Try to access various endpoints with old cookie
+// 	endpoints := []string{
+// 		userServiceUrl + "/info",
+// 		userServiceUrl + "/update",
+// 	}
+	
+// 	for _, endpoint := range endpoints {
+// 		resp := makeAuthenticatedRequest(t, client, http.MethodGet, endpoint, nil, cookie)
+// 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "Should not access %s after deletion", endpoint)
+// 	}
+// }
+
+func TestDeleteUser_CannotDeleteTwice(t *testing.T) {
+	_, _, cookie := registerLoginAndGetCookie(t)
+	
+	deleteUrl := userServiceUrl + "/delete"
+	
+	// First deletion - should succeed
+	deleteResp1 := makeAuthenticatedRequest(t, client, http.MethodDelete, deleteUrl, nil, cookie)
+	assert.Equal(t, http.StatusOK, deleteResp1.StatusCode)
+	
+	// Second deletion with same cookie - should fail
+	deleteResp2 := makeAuthenticatedRequest(t, client, http.MethodDelete, deleteUrl, nil, cookie)
+	assert.Equal(t, http.StatusUnauthorized, deleteResp2.StatusCode)
+}
+
+func TestDeleteUser_DifferentUsers(t *testing.T) {
+	// Create two users
+	username1, _, cookie1 := registerLoginAndGetCookie(t)
+	username2, password2, cookie2 := registerLoginAndGetCookie(t)
+	
+	// User 1 deletes their account
+	deleteUrl := userServiceUrl + "/delete"
+	deleteResp1 := makeAuthenticatedRequest(t, client, http.MethodDelete, deleteUrl, nil, cookie1)
+	assert.Equal(t, http.StatusOK, deleteResp1.StatusCode)
+	
+	// User 1 can no longer access their info
+	userInfoUrl := userServiceUrl + "/info"
+	infoResp1 := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, cookie1)
+	assert.Equal(t, http.StatusUnauthorized, infoResp1.StatusCode)
+	
+	// User 2 should still exist and be able to access their info
+	infoResp2 := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, cookie2)
+	assert.Equal(t, http.StatusOK, infoResp2.StatusCode)
+	
+	respPayload2 := parseResponse(t, infoResp2)
+	assert.Equal(t, username2, respPayload2["username"])
+	
+	// User 1 cannot login anymore
+	loginResp1 := makeRequest(t, client, http.MethodPost, userServiceUrl+"/login", map[string]any{
+		"username": username1,
+		"password": "testpass123",
+	})
+	assert.NotEqual(t, http.StatusOK, loginResp1.StatusCode)
+	
+	// User 2 can still login
+	loginResp2 := makeRequest(t, client, http.MethodPost, userServiceUrl+"/login", map[string]any{
+		"username": username2,
+		"password": password2,
+	})
+	assert.Equal(t, http.StatusOK, loginResp2.StatusCode)
+}
+
+func TestDeleteUser_WithUserData(t *testing.T) {
+	// Create user with custom data
+	username, password, cookie := registerLoginWithData(t, map[string]any{
+		"first_name":  "DeleteMe",
+		"last_name":   "TestUser",
+		"income":      50000,
+		"income_rate": "yearly",
+	})
+	
+	// Verify user exists with data
+	userInfoUrl := userServiceUrl + "/info"
+	infoResp := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, cookie)
+	assert.Equal(t, http.StatusOK, infoResp.StatusCode)
+	
+	infoPayload := parseResponse(t, infoResp)
+	assert.Equal(t, "DeleteMe", infoPayload["first_name"])
+	assert.Equal(t, float64(50000), infoPayload["income"])
+	
+	// Delete user
+	deleteUrl := userServiceUrl + "/delete"
+	deleteResp := makeAuthenticatedRequest(t, client, http.MethodDelete, deleteUrl, nil, cookie)
+	assert.Equal(t, http.StatusOK, deleteResp.StatusCode)
+	
+	// TODO: uncomment after token blacklisting is implemented
+	// // User should be gone
+	// loginResp := makeRequest(t, client, http.MethodPost, userServiceUrl+"/login", map[string]any{
+	// 	"username": username,
+	// 	"password": password,
+	// })
+	// assert.NotEqual(t, http.StatusOK, loginResp.StatusCode)
+}
+
+func TestDeleteUser_ThenRegisterSameUsername(t *testing.T) {
+	// Register and delete user
+	username, password, cookie := registerLoginAndGetCookie(t)
+	
+	deleteUrl := userServiceUrl + "/delete"
+	deleteResp := makeAuthenticatedRequest(t, client, http.MethodDelete, deleteUrl, nil, cookie)
+	assert.Equal(t, http.StatusOK, deleteResp.StatusCode)
+	
+	// Register a new user with the same username
+	registerUrl := userServiceUrl + "/register"
+	newUserPayload := map[string]any{
+		"first_name":  "NewUser",
+		"last_name":   "SameName",
+		"username":    username, // Same username as deleted user
+		"password":    password,
+		"income":      2000,
+		"income_rate": "monthly",
+	}
+	
+	registerResp := makeRequest(t, client, http.MethodPost, registerUrl, newUserPayload)
+	assert.Equal(t, http.StatusCreated, registerResp.StatusCode, "Should be able to reuse username after deletion")
+	
+	// Login with new user
+	newCookie := loginAndGetCookie(t, username, password)
+	assert.NotNil(t, newCookie)
+	
+	// Verify it's a new user (different data)
+	userInfoUrl := userServiceUrl + "/info"
+	infoResp := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, newCookie)
+	infoPayload := parseResponse(t, infoResp)
+	
+	assert.Equal(t, username, infoPayload["username"])
+	assert.Equal(t, "NewUser", infoPayload["first_name"])
+	assert.Equal(t, float64(2000), infoPayload["income"])
+}
+
+func TestDeleteUser_CascadeDelete(t *testing.T) {
+	// This test assumes you have related data (categories, items)
+	// that should be deleted when user is deleted
+	
+	_, _, cookie := registerLoginAndGetCookie(t)
+	
+	// TODO: Create some categories/items for the user
+	// createCategory(t, cookie, ...)
+	// createItem(t, cookie, ...)
+	
+	// Delete user
+	deleteUrl := userServiceUrl + "/delete"
+	deleteResp := makeAuthenticatedRequest(t, client, http.MethodDelete, deleteUrl, nil, cookie)
+	assert.Equal(t, http.StatusOK, deleteResp.StatusCode)
+	
+	// TODO: Verify categories/items are also deleted
+	// This depends on your database schema and cascade delete rules
+}
+
+func TestDeleteUser_AfterUpdate(t *testing.T) {
+	username, password, cookie := registerLoginAndGetCookie(t)
+	
+	// Update user first
+	updateUrl := userServiceUrl + "/update"
+	updatePayload := map[string]any{
+		"first_name": "Updated",
+		"income":     99999,
+	}
+	updateResp := makeAuthenticatedRequest(t, client, http.MethodPut, updateUrl, updatePayload, cookie)
+	assert.Equal(t, http.StatusOK, updateResp.StatusCode)
+	
+	// Verify update worked
+	userInfoUrl := userServiceUrl + "/info"
+	infoResp := makeAuthenticatedRequest(t, client, http.MethodGet, userInfoUrl, nil, cookie)
+	infoPayload := parseResponse(t, infoResp)
+	assert.Equal(t, "Updated", infoPayload["first_name"])
+	
+	// Delete user
+	deleteUrl := userServiceUrl + "/delete"
+	deleteResp := makeAuthenticatedRequest(t, client, http.MethodDelete, deleteUrl, nil, cookie)
+	assert.Equal(t, http.StatusOK, deleteResp.StatusCode)
+	
+	// User should be gone
+	loginResp := makeRequest(t, client, http.MethodPost, userServiceUrl+"/login", map[string]any{
+		"username": username,
+		"password": password,
+	})
+	assert.NotEqual(t, http.StatusOK, loginResp.StatusCode)
+}
+
+func TestDeleteUser_ResponseFormat(t *testing.T) {
+	_, _, cookie := registerLoginAndGetCookie(t)
+	
+	deleteUrl := userServiceUrl + "/delete"
+	deleteResp := makeAuthenticatedRequest(t, client, http.MethodDelete, deleteUrl, nil, cookie)
+	
+	assert.Equal(t, http.StatusOK, deleteResp.StatusCode)
+	
+	respPayload := parseResponse(t, deleteResp)
+	
+	// Verify response structure
+	message, ok := respPayload["message"].(string)
+	require.True(t, ok, "Response should have a 'message' field")
+	assert.NotEmpty(t, message)
+	assert.Contains(t, message, "deleted")
+}

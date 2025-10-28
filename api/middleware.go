@@ -1,10 +1,12 @@
 package api
 
 import (
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
+	"errors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -107,7 +109,16 @@ func authMiddleware() gin.HandlerFunc {
 		}
 		user, err := database.GetUserByID(c.Request.Context(), userID)
 		if err != nil {
-			slog.Error("error getting user from db.", "error", err.Error(), "userID", userID, "endpoint", c.Request.URL)
+			if errors.Is(err, sql.ErrNoRows) {
+				slog.Error("user does not exist", "error", err.Error(), "userID", userID, "endpoint", c.Request.URL.String())
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "user associated with this token does not exist"})
+				c.Abort()
+				return
+			}
+			slog.Error("error getting user from db.", "error", err.Error(), "userID", userID, "endpoint", c.Request.URL.String())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error pulling user data associated with provided purch token"})
+			c.Abort()
+			return
 		}
 		c.Set("user", user)
 		slog.Debug("user authenticated and userID context set.", "userID", userID, "endpoint", c.Request.URL)
