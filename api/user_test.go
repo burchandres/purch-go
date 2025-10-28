@@ -737,7 +737,7 @@ func TestDeleteUser_DifferentUsers(t *testing.T) {
 
 func TestDeleteUser_WithUserData(t *testing.T) {
 	// Create user with custom data
-	username, password, cookie := registerLoginWithData(t, map[string]any{
+	_, _, cookie := registerLoginWithData(t, map[string]any{
 		"first_name":  "DeleteMe",
 		"last_name":   "TestUser",
 		"income":      50000,
