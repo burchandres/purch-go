@@ -869,3 +869,23 @@ func TestDeleteUser_ResponseFormat(t *testing.T) {
 	assert.NotEmpty(t, message)
 	assert.Contains(t, message, "deleted")
 }
+
+func TestGetLinkToken(t *testing.T) {
+	_, _, cookie := registerLoginAndGetCookie(t)
+	
+	linkTokenUrl := userServiceUrl + "/link-token"
+	linkTokenResp := makeAuthenticatedRequest(t, client, http.MethodGet, linkTokenUrl, nil, cookie)
+	
+	assert.Equal(t, http.StatusOK, linkTokenResp.StatusCode)
+	
+	respPayload := parseResponse(t, linkTokenResp)
+	
+	// verify linkToken
+	linkToken, ok := respPayload["link_token"].(string)
+	require.True(t, ok, "Response should have a link_token")
+	assert.NotEmpty(t, linkToken)
+	// verify expiresAt
+	expiresAt, ok := respPayload["expires_at"].(string)
+	require.True(t, ok, "Response should have an expires_at")
+	assert.NotEmpty(t, expiresAt)
+}
