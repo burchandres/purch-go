@@ -71,6 +71,7 @@ func DeleteUser(ctx context.Context, user User) error {
 
 // -------- Item Queries --------
 
+// TODO: update this to decrypt the item's accountToken once encrypting it is implemented
 func GetItem(ctx context.Context, id string) (Item, error) {
 	var item Item
 	err := db.NewSelect().
@@ -103,4 +104,15 @@ func StoreAccount(ctx context.Context, account Account) error {
 // Batch insert a slice of accounts
 func StoreAccounts(ctx context.Context, accounts []*Account) error {
 	return db.NewInsert().Model(accounts).Scan(ctx)
+}
+
+// -------- Transaction Queries --------
+
+func GetTransaction(ctx context.Context, id string) (Transaction, error) {
+	var transaction Transaction
+	err := db.NewSelect().
+		Model(&transaction).
+		Where("id = ?", id).
+		Scan(ctx)
+	return transaction, err
 }

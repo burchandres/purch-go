@@ -136,7 +136,7 @@ func deleteCookie(c *gin.Context) {
 // TODO: call `/item/remove` Plaid endpoint to cancel associated access tokens to prevent unnecessary billing
 func deleteUser(c *gin.Context) {
 	// get user id from context
-	user, _ := c.Get("user")	
+	user, _ := c.Get("user")
 	// delete user from db
 	if err := database.DeleteUser(c.Request.Context(), user.(database.User)); err != nil {
 		slog.Error("failed to delete user.", "error", err, "userID", user.(database.User).ID)

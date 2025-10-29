@@ -25,55 +25,57 @@ type User struct {
 }
 
 type Category struct {
-	bun.BaseModel `bun:"table:categories,alias:c"`
+	bun.BaseModel `bun:"table:categories,alias:c" json:"-"`
 
-	ID                uuid.UUID `bun:"id,pk,type:uuid,default:gen_random_uuid()"`
-	UserID            uuid.UUID `bun:"user_id,type:uuid,notnull"`
-	Label             string    `bun:",notnull"`
-	CurrentSpending   float64   `bun:"current_spending,type:numeric,notnull,default:0"`
-	AllocatedSpending float64   `bun:"allocated_spending,type:numeric,notnull"`
+	ID                uuid.UUID `bun:"id,pk,type:uuid,default:gen_random_uuid()" json:"id"`
+	UserID            uuid.UUID `bun:"user_id,type:uuid,notnull" json:"user_id"`
+	Label             string    `bun:",notnull" json:"label"`
+	CurrentSpending   float64   `bun:"current_spending,type:numeric,notnull,default:0" json:"current_spending"`
+	AllocatedSpending float64   `bun:"allocated_spending,type:numeric,notnull" json:"allocated_spending"`
 
-	User *User `bun:"rel:belongs-to,join:user_id=id"`
+	User *User `bun:"rel:belongs-to,join:user_id=id" json:"-"`
 }
 
 type Item struct {
-	bun.BaseModel `bun:"table:items,alias:i"`
+	bun.BaseModel `bun:"table:items,alias:i" json:"-"`
 
-	ID                string    `bun:"id,pk"`
-	UserID            uuid.UUID `bun:"user_id,type:uuid,notnull"`
-	AccessToken       string    `bun:"access_token,notnull"`
-	Name              string    `bun:",notnull"`
-	TransactionCursor string    `bun:"transaction_cursor,notnull,default:''"`
+	ID                string    `bun:"id,pk" json:"id"`
+	UserID            uuid.UUID `bun:"user_id,type:uuid,notnull" json:"user_id"`
+	AccessToken       string    `bun:"access_token,notnull" json:"access_token"`
+	Name              string    `bun:",notnull" json:"name"`
+	TransactionCursor string    `bun:"transaction_cursor,notnull,default:''" json:"transaction_cursor"`
 
-	User     *User      `bun:"rel:belongs-to,join:user_id=id"`
-	Accounts []*Account `bun:"rel:has-many,join:id=item_id"`
+	User     *User      `bun:"rel:belongs-to,join:user_id=id" json:"-"`
+	Accounts []*Account `bun:"rel:has-many,join:id=item_id" json:"-"`
 }
 
 type Account struct {
-	bun.BaseModel `bun:"table:accounts,alias:a"`
+	bun.BaseModel `bun:"table:accounts,alias:a" json:"-"`
 
-	ID     string `bun:"id,pk"`
-	ItemID string `bun:"item_id,notnull"`
-	Name   string `bun:"name,notnull"`
+	ID      string `bun:"id,pk" json:"id"`
+	ItemID  string `bun:"item_id,notnull" json:"item_id"`
+	Name    string `bun:"name,notnull" json:"name"`
+	Type    string `bun:"type,notnull" json:"type"`
+	SubType string `bun:"sub_type" json:"sub_type"`
 
-	Item         *Item          `bun:"rel:belongs-to,join:item_id=id"`
-	Transactions []*Transaction `bun:"rel:has-many,join:id=account_id"`
+	Item         *Item          `bun:"rel:belongs-to,join:item_id=id" json:"-"`
+	Transactions []*Transaction `bun:"rel:has-many,join:id=account_id" json:"-"`
 }
 
 type Transaction struct {
-	bun.BaseModel `bun:"table:transactions,alias:t"`
+	bun.BaseModel `bun:"table:transactions,alias:t" json:"-"`
 
-	ID             string     `bun:"id,pk"`
-	AccountID      string     `bun:"account_id,notnull"`
-	CategoryLabel  *string    `bun:"category_label"`
-	AuthorizedDate time.Time  `bun:"authorized_date,notnull,default:current_date"`
-	SettledDate    *time.Time `bun:"settled_date"`
-	Merchant       *string    `bun:"merchant"`
-	Amount         float64    `bun:"type:numeric,notnull,default:0"`
-	CurrencyCode   *string    `bun:"currency_code"`
-	Pending        bool       `bun:"pending,notnull,default:false"`
+	ID             string     `bun:"id,pk" json:"id"`
+	AccountID      string     `bun:"account_id,notnull" json:"account_id"`
+	CategoryLabel  *string    `bun:"category_label" json:"category_label"`
+	AuthorizedDate time.Time  `bun:"authorized_date,notnull,default:current_date" json:"authorized_date"`
+	SettledDate    *time.Time `bun:"settled_date" json:"settled_date"`
+	Merchant       *string    `bun:"merchant" json:"merchant"`
+	Amount         float64    `bun:"type:numeric,notnull,default:0" json:"amount"`
+	CurrencyCode   *string    `bun:"currency_code" json:"currency_code"`
+	Pending        bool       `bun:"pending,notnull,default:false" json:"pending"`
 
-	Account *Account `bun:"rel:belongs-to,join:account_id=id"`
+	Account *Account `bun:"rel:belongs-to,join:account_id=id" json:"-"`
 }
 
 // -------- Update Schemas --------
