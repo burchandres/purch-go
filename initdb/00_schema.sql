@@ -34,6 +34,10 @@ CREATE TABLE IF NOT EXISTS accounts (
     id text UNIQUE,
     item_id text REFERENCES items (id) ON DELETE CASCADE,
     name text NOT NULL,
+    available_balance numeric,
+    current_balance numberic,
+    type text,
+    subtype text,
 
     PRIMARY KEY (id, item_id)
 );

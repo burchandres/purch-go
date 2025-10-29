@@ -55,8 +55,15 @@ type Account struct {
 	ID      string `bun:"id,pk" json:"id"`
 	ItemID  string `bun:"item_id,notnull" json:"item_id"`
 	Name    string `bun:"name,notnull" json:"name"`
+	AvailableBalance *float64 `bun:"available_balance" json:"available_balance"`
+	CurrentBalance *float64 `bun:"current_balance" json:"current_balance"`
+	// Would be any of: 
+	// - Depository (e.g. checking, savings)
+	// - Credit (e.g. credit cards)
+	// - Investment (e.g. 401k, IRA, etc.)
 	Type    string `bun:"type,notnull" json:"type"`
-	SubType string `bun:"sub_type" json:"sub_type"`
+	// A specific example of the type: e.g. If Type=Depository, then SubType=Checking or Savings
+	SubType *string `bun:"sub_type" json:"sub_type"`
 
 	Item         *Item          `bun:"rel:belongs-to,join:item_id=id" json:"-"`
 	Transactions []*Transaction `bun:"rel:has-many,join:id=account_id" json:"-"`
