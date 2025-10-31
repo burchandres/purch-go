@@ -42,26 +42,26 @@ type Item struct {
 	Name              string    `bun:",notnull" json:"name"`
 	TransactionCursor string    `bun:"transaction_cursor,notnull,default:''" json:"transaction_cursor"`
 
-	User     *User      `bun:"rel:belongs-to,join:user_id=id" json:"-"`
+	User *User `bun:"rel:belongs-to,join:user_id=id" json:"-"`
 }
 
 type Account struct {
 	bun.BaseModel `bun:"table:accounts,alias:a" json:"-"`
 
-	ID      string `bun:"id,pk" json:"id"`
-	ItemID  string `bun:"item_id,notnull" json:"item_id"`
-	Name    string `bun:"name,notnull" json:"name"`
+	ID               string   `bun:"id,pk" json:"id"`
+	ItemID           string   `bun:"item_id,notnull" json:"item_id"`
+	Name             string   `bun:"name,notnull" json:"name"`
 	AvailableBalance *float64 `bun:"available_balance" json:"available_balance"`
-	CurrentBalance *float64 `bun:"current_balance" json:"current_balance"`
-	// Would be any of: 
+	CurrentBalance   *float64 `bun:"current_balance" json:"current_balance"`
+	// Would be any of:
 	// - Depository (e.g. checking, savings)
 	// - Credit (e.g. credit cards)
 	// - Investment (e.g. 401k, IRA, etc.)
-	Type    string `bun:"type,notnull" json:"type"`
+	Type string `bun:"type,notnull" json:"type"`
 	// A specific example of the type: e.g. If Type=Depository, then SubType=Checking or Savings
 	SubType *string `bun:"sub_type" json:"sub_type"`
 
-	Item         *Item          `bun:"rel:belongs-to,join:item_id=id" json:"-"`
+	Item *Item `bun:"rel:belongs-to,join:item_id=id" json:"-"`
 }
 
 type Transaction struct {

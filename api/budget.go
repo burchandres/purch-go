@@ -16,7 +16,7 @@ func SetupBudgetEndpoints(router *gin.Engine) {
 	{
 		protected.GET("/categories", getCategories)
 		protected.GET("/items", getItems)
-		protected.GET("/accounts", getAccounts)  
+		protected.GET("/accounts", getAccounts)
 		protected.GET("/transactions", getTransactions)
 	}
 }
@@ -53,7 +53,6 @@ func getAccounts(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"results": accounts})
 }
-
 
 func getTransactions(c *gin.Context) {
 	user, _ := c.Get("user")
