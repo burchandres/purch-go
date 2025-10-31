@@ -7,7 +7,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// TODO: refactor all this into BudgetService and UserService structs
+// TODO: refactor all this into BudgetService and UserService structs for dependency injection pattern
 
 // -------- User Queries --------
 
