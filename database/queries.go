@@ -69,6 +69,45 @@ func DeleteUser(ctx context.Context, user User) error {
 	return err
 }
 
+func GetUserCategories(ctx context.Context, userID uuid.UUID) ([]Category, error) {
+	var categories []Category
+	err := db.NewSelect().
+		Model(&categories).
+		Where("user_id = ?", userID).
+		Scan(ctx)
+	return categories, err
+}
+
+func GetUserItems(ctx context.Context, userID uuid.UUID) ([]Item, error) {
+	var items []Item
+	err := db.NewSelect().
+		Model(&items).
+		Where("user_id = ?", userID).
+		Scan(ctx)
+	return items, err
+}
+
+func GetUserAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error) {
+	var accounts []Account
+	err := db.NewSelect().
+		Model(&accounts).
+		Join("JOIN items AS i ON i.id = accounts.item_id").
+		Where("i.user_id = ?", userID).
+		Scan(ctx)
+	return accounts, err
+}
+
+func GetUserTransactions(ctx context.Context, userID uuid.UUID) ([]Transaction, error) {
+	var transactions []Transaction
+	err := db.NewSelect().
+	    Model(&transactions).
+	    Join("JOIN accounts AS a ON a.id = transactions.account_id").
+	    Join("JOIN items AS i on i.id = a.item_id").
+	    Where("i.user_id = ?", userID).
+		Scan(ctx)
+	return transactions, err
+}
+
 // -------- Item Queries --------
 
 // TODO: update this to decrypt the item's accountToken once encrypting it is implemented

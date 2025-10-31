@@ -19,9 +19,6 @@ type User struct {
 	Password   string    `bun:"password,notnull" json:"password"`
 	Income     *float64  `bun:"income,type:numeric" json:"income,omitempty"`
 	IncomeRate *string   `bun:"income_rate" json:"income_rate,omitempty"`
-
-	Categories []*Category `bun:"rel:has-many,join:id=user_id" json:"-"`
-	Items      []*Item     `bun:"rel:has-many,join:id=user_id" json:"-"`
 }
 
 type Category struct {
@@ -46,7 +43,6 @@ type Item struct {
 	TransactionCursor string    `bun:"transaction_cursor,notnull,default:''" json:"transaction_cursor"`
 
 	User     *User      `bun:"rel:belongs-to,join:user_id=id" json:"-"`
-	Accounts []*Account `bun:"rel:has-many,join:id=item_id" json:"-"`
 }
 
 type Account struct {
@@ -66,7 +62,6 @@ type Account struct {
 	SubType *string `bun:"sub_type" json:"sub_type"`
 
 	Item         *Item          `bun:"rel:belongs-to,join:item_id=id" json:"-"`
-	Transactions []*Transaction `bun:"rel:has-many,join:id=account_id" json:"-"`
 }
 
 type Transaction struct {
