@@ -28,6 +28,7 @@ func getCategories(c *gin.Context) {
 	if err != nil && err != sql.ErrNoRows {
 		slog.Error("error pulling user categories", "error", err.Error(), "userID", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error pulling user categories..."})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{"results": categories})
 }
@@ -39,6 +40,7 @@ func getItems(c *gin.Context) {
 	if err != nil && err != sql.ErrNoRows {
 		slog.Error("error pulling user items", "error", err.Error(), "userID", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error pulling user items..."})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{"results": items})
 }
@@ -50,6 +52,7 @@ func getAccounts(c *gin.Context) {
 	if err != nil && err != sql.ErrNoRows {
 		slog.Error("error pulling user accounts", "error", err.Error(), "userID", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error pulling user accounts..."})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{"results": accounts})
 }
@@ -61,6 +64,7 @@ func getTransactions(c *gin.Context) {
 	if err != nil && err != sql.ErrNoRows {
 		slog.Error("error pulling user's transactions", "error", err.Error(), "userID", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error pulling user transactions..."})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{"results": transactions})
 }

@@ -35,7 +35,7 @@ tasks:
     cmds:
       - go vet ./...
 
-  nag:
+  tidy:
     cmds:
       - task: format
       - task: vet
