@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     available_balance numeric,
     current_balance numeric,
     type text,
-    subtype text,
+    sub_type text,
 
     PRIMARY KEY (id, item_id)
 );
