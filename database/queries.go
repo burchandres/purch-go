@@ -91,7 +91,8 @@ func GetUserAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error) {
 	var accounts []Account
 	err := db.NewSelect().
 		Model(&accounts).
-		Join("JOIN items AS i ON i.id = accounts.item_id").
+		ColumnExpr("a.*").
+		Join("JOIN items AS i").JoinOn("i.id = a.item_id").
 		Where("i.user_id = ?", userID).
 		Scan(ctx)
 	return accounts, err
@@ -101,8 +102,9 @@ func GetUserTransactions(ctx context.Context, userID uuid.UUID) ([]Transaction, 
 	var transactions []Transaction
 	err := db.NewSelect().
 		Model(&transactions).
-		Join("JOIN accounts AS a ON a.id = transactions.account_id").
-		Join("JOIN items AS i on i.id = a.item_id").
+		ColumnExpr("t.*").
+		Join("JOIN accounts AS a").JoinOn("a.id = t.account_id").
+		Join("JOIN items AS i" ).JoinOn("i.id = a.item_id").
 		Where("i.user_id = ?", userID).
 		Scan(ctx)
 	return transactions, err
