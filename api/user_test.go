@@ -181,9 +181,12 @@ func makeAuthenticatedRequest(
 	payload map[string]any,
 	cookie *http.Cookie,
 ) *http.Response {
-	body, err := json.Marshal(payload)
-	require.NoError(t, err)
-
+	var body []byte
+	var err error
+	if payload != nil {
+		body, err = json.Marshal(payload)
+		require.NoError(t, err)
+	}
 	req, err := http.NewRequestWithContext(context.Background(), method, url, bytes.NewBuffer(body))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")

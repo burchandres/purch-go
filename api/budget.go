@@ -30,7 +30,7 @@ func getCategories(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error pulling user categories..."})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"results": categories})
+	c.JSON(http.StatusOK, categories)
 }
 
 func getItems(c *gin.Context) {
@@ -42,7 +42,7 @@ func getItems(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error pulling user items..."})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"results": items})
+	c.JSON(http.StatusOK, items)
 }
 
 func getAccounts(c *gin.Context) {
@@ -54,7 +54,7 @@ func getAccounts(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error pulling user accounts..."})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"results": accounts})
+	c.JSON(http.StatusOK, accounts)
 }
 
 func getTransactions(c *gin.Context) {
@@ -66,5 +66,5 @@ func getTransactions(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error pulling user transactions..."})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"results": transactions})
+	c.JSON(http.StatusOK, transactions)
 }
