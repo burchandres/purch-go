@@ -106,7 +106,7 @@ func GetUserTransactions(ctx context.Context, userID uuid.UUID) ([]Transaction, 
 		Join("JOIN accounts AS a").JoinOn("a.id = t.account_id").
 		Join("JOIN items AS i" ).JoinOn("i.id = a.item_id").
 		Where("i.user_id = ?", userID).
-		// OrderExpr("t.authorized_date").
+		// Order("t.authorized_date").
 		Scan(ctx)
 	return transactions, err
 }
