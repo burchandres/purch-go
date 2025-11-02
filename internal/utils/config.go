@@ -1,11 +1,10 @@
 package utils
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
-	// "strings"
+
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -28,11 +27,7 @@ type Config struct {
 	// General settings
 	LogLevel string
 	// Database settings
-	PostgresHost     string
-	PostgresPort     int
-	PostgresUser     string
-	PostgresPassword string
-	PostgresDatabase string
+	PostgresUrl string
 	// Encryption settings
 	SecretKey           string
 	EncryptionAlgorithm string
@@ -66,17 +61,6 @@ func (c *Config) GetPlaidProducts() []plaid.Products {
 	return []plaid.Products{plaid.PRODUCTS_AUTH, plaid.PRODUCTS_TRANSACTIONS}
 }
 
-func (c *Config) GetPostgresURL() string {
-	return fmt.Sprintf(
-		"postgres://%s:%s@%s:%d/%s",
-		c.PostgresUser,
-		c.PostgresPassword,
-		c.PostgresHost,
-		c.PostgresPort,
-		c.PostgresDatabase,
-	)
-}
-
 func GetConfig() *Config {
 	once.Do(func() {
 		cfg = loadConfig()
@@ -92,12 +76,8 @@ func loadConfig() *Config {
 	_ = godotenv.Load(".env")
 
 	config := &Config{
-		LogLevel:            getEnvVar("LOG_LEVEL", "INFO"),
-		PostgresHost:        getEnvVar("POSTGRES_HOST", "postgres"),
-		PostgresPort:        getEnvVar("POSTGRES_PORT", 5432),
-		PostgresUser:        getEnvVar("POSTGRES_USER", "postgres"),
-		PostgresPassword:    getEnvVar("POSTGRES_PASSWORD", "password"),
-		PostgresDatabase:    getEnvVar("POSTGRES_DATABASE", "purch"),
+		LogLevel:            getEnvVar("LOG_LEVEL", "DEBUG"),
+		PostgresUrl:         getEnvVar("POSTGRES_URL", "postgres://postgres:password@postgres:5432/purch?sslmode=disable"),
 		SecretKey:           getEnvVar("SECRET_KEY", ""),
 		EncryptionAlgorithm: getEnvVar("ENCRYPTION_ALGORITHM", "HS256"),
 		PlaidClientID:       getEnvVar("PLAID_CLIENT_ID", "client_id"),

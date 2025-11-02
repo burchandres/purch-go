@@ -1,9 +1,9 @@
 package utils
 
 import (
-	"github.com/plaid/plaid-go/v40/plaid"
-
 	"sync"
+
+	"github.com/plaid/plaid-go/v40/plaid"
 )
 
 var (

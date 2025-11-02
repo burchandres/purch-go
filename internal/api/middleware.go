@@ -1,18 +1,20 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-)
+	"github.com/google/uuid"
 
-// Secret key for signing tokens (in production, load from environment)
-var secretKey = []byte(os.Getenv("SECRET_KEY"))
+	"purch/internal/database"
+	"purch/internal/utils"
+)
 
 // Claims represents the JWT claims
 type Claims struct {
@@ -22,6 +24,7 @@ type Claims struct {
 
 // CreateToken generates a JWT token and returns it as a string
 func createToken(userID string) (string, error) {
+	config := utils.GetConfig()
 	issuedAt := time.Now()
 	expiresAt := time.Now().Add(30 * time.Minute)
 
@@ -35,7 +38,7 @@ func createToken(userID string) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(secretKey)
+	tokenString, err := token.SignedString([]byte(config.SecretKey))
 	if err != nil {
 		return "", err
 	}
@@ -46,12 +49,13 @@ func createToken(userID string) (string, error) {
 // ParseToken validates and parses a JWT token string
 func parseToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
+	config := utils.GetConfig()
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return secretKey, nil
+		return []byte(config.SecretKey), nil
 	})
 	if err != nil {
 		return nil, err
@@ -70,7 +74,7 @@ func authMiddleware() gin.HandlerFunc {
 		// Get token from cookie
 		tokenString, err := c.Cookie("purch_token")
 		if err != nil {
-			slog.Error("Missing purch token")
+			slog.Error("missing purch token")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing purch token"})
 			c.Abort()
 			return
@@ -79,7 +83,7 @@ func authMiddleware() gin.HandlerFunc {
 		// Parse and validate token
 		claims, err := parseToken(tokenString)
 		if err != nil {
-			slog.Error("Invalid purch token", "error", err)
+			slog.Error("invalid purch token", "error", err.Error(), "endpoint", c.Request.URL)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid purch token"})
 			c.Abort()
 			return
@@ -94,9 +98,30 @@ func authMiddleware() gin.HandlerFunc {
 			}
 		}
 
-		// Store userID in context for use in handlers
-		c.Set("userID", claims.UserID)
-		slog.Debug("user authenticated and userID context set.", "userID", claims.UserID, "endpoint", c.Request.URL)
+		// Store user in context for use in handlers
+		userID, err := uuid.Parse(claims.UserID)
+		if err != nil {
+			slog.Error("error parsing user id from purch_token.", "error", err.Error(), "userID", claims.UserID)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user id format in purch_token"})
+			c.Abort()
+			return
+
+		}
+		user, err := database.GetUserByID(c.Request.Context(), userID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				slog.Error("user does not exist", "error", err.Error(), "userID", userID, "endpoint", c.Request.URL.String())
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "user associated with this token does not exist"})
+				c.Abort()
+				return
+			}
+			slog.Error("error getting user from db.", "error", err.Error(), "userID", userID, "endpoint", c.Request.URL.String())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error pulling user data associated with provided purch token"})
+			c.Abort()
+			return
+		}
+		c.Set("user", user)
+		slog.Debug("user authenticated and userID context set.", "userID", userID, "endpoint", c.Request.URL)
 
 		c.Next()
 	}

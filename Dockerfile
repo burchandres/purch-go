@@ -1,5 +1,5 @@
 # Stage 1: Build stage
-FROM golang:1.25-alpine AS builder
+FROM golang:1.25-alpine AS build-dependencies
 
 # Set working directory
 WORKDIR /app
@@ -28,7 +28,7 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /app
 
 # Copy the binary from the builder stage
-COPY --from=builder /app/purch .
+COPY --from=build-dependencies /app/purch .
 
 # Expose port (adjust as needed for your app)
 EXPOSE 8080

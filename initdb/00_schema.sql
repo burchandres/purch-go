@@ -34,6 +34,10 @@ CREATE TABLE IF NOT EXISTS accounts (
     id text UNIQUE,
     item_id text REFERENCES items (id) ON DELETE CASCADE,
     name text NOT NULL,
+    available_balance numeric,
+    current_balance numeric,
+    type text,
+    sub_type text,
 
     PRIMARY KEY (id, item_id)
 );
@@ -52,13 +56,3 @@ CREATE TABLE IF NOT EXISTS transactions (
 
     PRIMARY KEY (id, account_id)
 );
-
--- initialiaze the db with a test user 
-INSERT INTO users (
-    first_name,
-    last_name,
-    username,
-    password,
-    income,
-    income_rate
-) VALUES ('test', 'user', 'test_user', 'test_pass', 1000, 'weekly');
