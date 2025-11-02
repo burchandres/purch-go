@@ -54,7 +54,7 @@ func SyncItem(
 	accessToken string,
 ) error {
 	plaidClient := utils.GetPlaidClient()
-	slog.Debug("pulling item info from plaid for local persistence.", "itemID", itemID, "user", userID.String())
+	slog.Debug("pulling item info from plaid for local persistence.", "itemID", itemID, "userID", userID)
 	// create itemGetRequest
 	request := plaid.NewItemGetRequest(accessToken)
 	// execute itemGetRequest
@@ -72,7 +72,7 @@ func SyncItem(
 	itemParams.Name = item.GetInstitutionName()
 	// store the item
 	if err = database.StoreItem(ctx, itemParams); err != nil {
-		slog.Error("failed to store item", "error", err, "endpoint", "/api/user/exchange-public-token")
+		slog.Error("failed to store item", "error", err, "userID", userID)
 		return ErrStoringItem
 	}
 
