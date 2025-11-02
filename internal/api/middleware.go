@@ -12,8 +12,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
-	"purch/database"
-	"purch/utils"
+	"purch/internal/database"
+	"purch/internal/utils"
 )
 
 // Claims represents the JWT claims

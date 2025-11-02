@@ -10,8 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/plaid/plaid-go/v40/plaid"
 
-	"purch/database"
-	"purch/utils"
+	"purch/internal/database"
+	"purch/internal/utils"
 )
 
 const (

@@ -8,9 +8,9 @@ import (
 	"github.com/plaid/plaid-go/v40/plaid"
 	"golang.org/x/crypto/bcrypt"
 
-	"purch/database"
-	"purch/tasks"
-	"purch/utils"
+	"purch/internal/database"
+	"purch/internal/tasks"
+	"purch/internal/utils"
 )
 
 func SetupUserEndpoints(r *gin.Engine) {

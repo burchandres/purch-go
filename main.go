@@ -11,9 +11,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"purch/api"
-	"purch/database"
-	"purch/utils"
+	"purch/internal/api"
+	"purch/internal/database"
+	"purch/internal/utils"
 )
 
 var slogLevels = map[string]slog.Level{

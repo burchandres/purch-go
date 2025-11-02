@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"purch/database"
+	"purch/internal/database"
 )
 
 func SetupBudgetEndpoints(router *gin.Engine) {
