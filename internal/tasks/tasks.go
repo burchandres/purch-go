@@ -172,10 +172,21 @@ func (w *TransactionsWorker) Start() {
 
 func (w *TransactionsWorker) Wait() error {
 	err := w.g.Wait()
-	close(w.addedChan)
-	close(w.modifiedChan)
-	close(w.removedChan)
+	w.shutdown()
 	return err
+}
+
+func (w *TransactionsWorker) shutdown() {
+	// check if any of the channels aren't closed and close them
+	if _, ok := <- w.addedChan; ok {
+		close(w.addedChan)
+	}
+	if _, ok := <- w.modifiedChan; ok {
+		close(w.modifiedChan)
+	}
+	if _, ok := <- w.removedChan; ok {
+		close(w.removedChan)
+	}
 }
 
 func (w *TransactionsWorker) pullTransactionsFromPlaid() error {
