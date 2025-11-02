@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	// "sync"
-	// "time"
 
 	"github.com/google/uuid"
 	"github.com/plaid/plaid-go/v40/plaid"
+	"golang.org/x/sync/errgroup"
 
 	"purch/internal/database"
 	"purch/internal/utils"
@@ -122,8 +121,8 @@ func SyncTransactions(
 	accessToken string,
 	cursor string,
 ) error {
-	worker := NewTransactionsWorker(itemID, accessToken, cursor)
-	worker.Start(ctx)
+	worker := NewTransactionsWorker(ctx, itemID, accessToken, cursor)
+	worker.Start()
 	return worker.Wait()
 }
 
@@ -131,25 +130,111 @@ type TransactionsWorker struct {
 	itemID      string
 	accessToken string
 	cursor      string
+	ctx         context.Context
+
+	g    *errgroup.Group
+	gCtx context.Context
 
 	addedChan    chan []plaid.Transaction
 	modifiedChan chan []plaid.Transaction
 	removedChan  chan []plaid.RemovedTransaction
 }
 
-func NewTransactionsWorker(itemID, accessToken, cursor string) *TransactionsWorker {
+func NewTransactionsWorker(ctx context.Context, itemID, accessToken, cursor string) *TransactionsWorker {
+	g, gCtx := errgroup.WithContext(ctx)
 	return &TransactionsWorker{
 		itemID:       itemID,
 		accessToken:  accessToken,
+		cursor:       cursor,
+		g:            g,
+		gCtx:         gCtx,
+		ctx:          ctx,
 		addedChan:    make(chan []plaid.Transaction),
 		modifiedChan: make(chan []plaid.Transaction),
 		removedChan:  make(chan []plaid.RemovedTransaction),
 	}
 }
 
-func (w *TransactionsWorker) Start(ctx context.Context) {}
+func (w *TransactionsWorker) Start() {
+	w.g.Go(func() error {
+		return w.pullTransactionsFromPlaid()
+	})
+	w.g.Go(func() error {
+		return w.syncAddedTransactionsFromPlaid()
+	})
+	w.g.Go(func() error {
+		return w.syncModifiedTransactionsFromPlaid()
+	})
+	w.g.Go(func() error {
+		return w.syncRemovedTransactionsFromPlaid()
+	})
+}
 
 func (w *TransactionsWorker) Wait() error {
+	err := w.g.Wait()
+	close(w.addedChan)
+	close(w.modifiedChan)
+	close(w.removedChan)
+	return err
+}
+
+func (w *TransactionsWorker) pullTransactionsFromPlaid() error {
+	hasMore := true
+	// create TransactionsSyncRequest
+	plaidClient := utils.GetPlaidClient()
+	transactionsSyncRequest := plaid.NewTransactionsSyncRequest(w.accessToken)
+	for hasMore {
+		select {
+		case <-w.gCtx.Done():
+			slog.Debug("group context cancelled, recorded in pulling transactions", "error", w.gCtx.Err(), "itemID", w.itemID)
+			return w.gCtx.Err()
+		default:
+			// set cursor value
+			transactionsSyncRequest.SetCursor(w.cursor)
+			// execute TransactionsSyncRequest
+			transactionsSyncResp, _, err := plaidClient.PlaidApi.TransactionsSync(w.gCtx).TransactionsSyncRequest(*transactionsSyncRequest).Execute()
+			if err != nil {
+				slog.Error("error pulling transactions", "itemID", w.itemID, "cursor", w.cursor, )
+				return ErrRequestingTransactions
+			}
+			// update hasMore and transaction cursor
+			hasMore = transactionsSyncResp.GetHasMore()
+			w.cursor = transactionsSyncResp.GetNextCursor()
+			// send added transactions for processing
+			added := transactionsSyncResp.GetAdded()
+			if len(added) == 0 {
+				close(w.addedChan)
+			} else {
+				w.addedChan <- added
+			}
+			// send modified transactions for processing
+			modified := transactionsSyncResp.GetModified()
+			if len(modified) == 0 {
+				close(w.modifiedChan)
+			} else {
+				w.modifiedChan <- modified
+			}
+			// send removed transactions for processing
+			removed := transactionsSyncResp.GetRemoved()
+			if len(removed) == 0 {
+				close(w.removedChan)
+			} else {
+				w.removedChan <- removed
+			}
+		}
+	}
+	return nil
+}
+
+func (w *TransactionsWorker) syncAddedTransactionsFromPlaid() error {
+	return nil
+}
+
+func (w *TransactionsWorker) syncModifiedTransactionsFromPlaid() error {
+	return nil
+}
+
+func (w *TransactionsWorker) syncRemovedTransactionsFromPlaid() error {
 	return nil
 }
 
