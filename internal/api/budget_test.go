@@ -1,9 +1,9 @@
 package api
 
 import (
+	"encoding/json"
 	"io"
 	"testing"
-	"encoding/json"
 
 	"github.com/stretchr/testify/assert"
 
@@ -12,8 +12,8 @@ import (
 
 // login credentials
 const (
-	testuser = "testuser"
-	testpass = "testpass"
+	testuser         = "testuser"
+	testpass         = "testpass"
 	budgetServiceUrl = "http://localhost:8080/budget"
 )
 
@@ -22,7 +22,7 @@ const (
 func TestGetCategories(t *testing.T) {
 	cookie := loginAndGetCookie(t, testuser, testpass)
 	// hit /budget/categories
-	resp := makeAuthenticatedRequest(t, client, "GET", budgetServiceUrl + "/categories", nil, cookie)
+	resp := makeAuthenticatedRequest(t, client, "GET", budgetServiceUrl+"/categories", nil, cookie)
 	// parse the response
 	body, err := io.ReadAll(resp.Body)
 	var categories []database.Category
@@ -36,7 +36,7 @@ func TestGetCategories(t *testing.T) {
 func TestGetItems(t *testing.T) {
 	cookie := loginAndGetCookie(t, testuser, testpass)
 	// hit /budget/categories
-	resp := makeAuthenticatedRequest(t, client, "GET", budgetServiceUrl + "/items", nil, cookie)
+	resp := makeAuthenticatedRequest(t, client, "GET", budgetServiceUrl+"/items", nil, cookie)
 	// parse the response
 	body, err := io.ReadAll(resp.Body)
 	var items []database.Item
@@ -50,7 +50,7 @@ func TestGetItems(t *testing.T) {
 func TestGetAccounts(t *testing.T) {
 	cookie := loginAndGetCookie(t, testuser, testpass)
 	// hit /budget/categories
-	resp := makeAuthenticatedRequest(t, client, "GET", budgetServiceUrl + "/accounts", nil, cookie)
+	resp := makeAuthenticatedRequest(t, client, "GET", budgetServiceUrl+"/accounts", nil, cookie)
 	// parse the response
 	body, err := io.ReadAll(resp.Body)
 	var accounts []database.Account
@@ -64,7 +64,7 @@ func TestGetAccounts(t *testing.T) {
 func TestGetTransactions(t *testing.T) {
 	cookie := loginAndGetCookie(t, testuser, testpass)
 	// hit /budget/categories
-	resp := makeAuthenticatedRequest(t, client, "GET", budgetServiceUrl + "/transactions", nil, cookie)
+	resp := makeAuthenticatedRequest(t, client, "GET", budgetServiceUrl+"/transactions", nil, cookie)
 	// parse the response
 	body, err := io.ReadAll(resp.Body)
 	var transactions []database.Transaction
