@@ -158,3 +158,7 @@ func GetTransaction(ctx context.Context, id string) (Transaction, error) {
 		Scan(ctx)
 	return transaction, err
 }
+
+func StoreTransactions(ctx context.Context, transactions []*Transaction) error {
+	return db.NewInsert().Model(transactions).Scan(ctx)
+}

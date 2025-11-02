@@ -238,7 +238,26 @@ func (w *TransactionsWorker) pullTransactionsFromPlaid() error {
 }
 
 func (w *TransactionsWorker) syncAddedTransactionsFromPlaid() error {
-	return nil
+	for {
+		select {
+		case <-w.gCtx.Done():
+			slog.Debug("group context cancelled, recorded in syncing added transactions routine", "error", w.gCtx.Err(), "itemID", w.itemID)
+			return w.gCtx.Err()
+		case addedTransactions := <-w.addedChan:
+			// parse plaid transactions into purch transaction
+			transactions := make([]*database.Transaction, len(addedTransactions))
+			for i := range transactions {
+				transactions[i] = parsePlaidTransaction(addedTransactions[i])
+			}
+			// persist transactions for the user
+			if err := database.StoreTransactions(w.gCtx, transactions); err != nil {
+				slog.Error("error persisting user's transactions", "error", err.Error(), "itemID", w.itemID)
+			}
+		default:
+			slog.Debug("addedChan is closed and group context is still valid, exiting add transactions routine", "itemID", w.itemID)
+			return nil
+		}
+	}
 }
 
 func (w *TransactionsWorker) syncModifiedTransactionsFromPlaid() error {
@@ -247,6 +266,37 @@ func (w *TransactionsWorker) syncModifiedTransactionsFromPlaid() error {
 
 func (w *TransactionsWorker) syncRemovedTransactionsFromPlaid() error {
 	return nil
+}
+
+// TODO: separate added vs modified to only extract fields we care about that were updated
+func parsePlaidTransaction(transaction plaid.Transaction) *database.Transaction {
+	var t database.Transaction
+	// tx id and account id
+	t.ID = transaction.GetTransactionId()
+	t.AccountID = transaction.GetAccountId()
+	// category label
+	// TODO: perform semantic search to map via foreign key to user defined category
+	categoryLabel := unknownCategory
+	if len(transaction.GetCategory()) > 0 {
+		categoryLabel = transaction.GetCategory()[0]
+	}
+	t.CategoryLabel = &categoryLabel
+	// transaction dates
+	t.AuthorizedDate = transaction.GetAuthorizedDatetime()
+	settledDate := transaction.GetDatetime()
+	t.SettledDate = &settledDate
+	// merchant
+	merchant := transaction.GetMerchantName()
+	t.Merchant = &merchant
+	// transaction amount
+	t.Amount = transaction.GetAmount()
+	// currency code
+	currencyCode := transaction.GetIsoCurrencyCode()
+	t.CurrencyCode = &currencyCode
+	// pending
+	t.Pending = transaction.GetPending()
+
+	return &t
 }
 
 // func SyncTransactions(
