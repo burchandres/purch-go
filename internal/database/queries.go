@@ -124,6 +124,14 @@ func GetItem(ctx context.Context, id string) (Item, error) {
 	return item, err
 }
 
+func UpdateItemCursor(ctx context.Context, cursor, itemID string) error {
+	return db.NewUpdate().
+		Model((*Item)(nil)).
+		Set("cursor = ?", cursor).
+		Where("id = ?", itemID).
+		Scan(ctx)
+}
+
 func StoreItem(ctx context.Context, item Item) error {
 	return db.NewInsert().Model(&item).Scan(ctx)
 }
