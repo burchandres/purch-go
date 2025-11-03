@@ -183,6 +183,7 @@ func getLinkToken(c *gin.Context) {
 	request.SetUser(*requestUser)
 	request.SetProducts(config.GetPlaidProducts())
 	request.SetRedirectUri(config.PlaidRedirectUri)
+	// request.SetWebhook()
 
 	resp, _, err := plaidClient.PlaidApi.LinkTokenCreate(c.Request.Context()).LinkTokenCreateRequest(*request).Execute()
 

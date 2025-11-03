@@ -46,11 +46,12 @@ func UpdateUser(ctx context.Context, id uuid.UUID, updateParams UpdateUserParams
 		stmt = stmt.Set("username = ?", *updateParams.Username)
 	}
 	if updateParams.Password != nil {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*updateParams.Password), bcrypt.DefaultCost)
+		newPassword := *(updateParams.Password)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
 		if err != nil {
 			return err
 		}
-		stmt = stmt.Set("password = ?", hashedPassword)
+		stmt = stmt.Set("password = ?", string(hashedPassword))
 	}
 	if updateParams.Income != nil {
 		stmt = stmt.Set("income = ?", *updateParams.Income)
@@ -161,4 +162,12 @@ func GetTransaction(ctx context.Context, id string) (Transaction, error) {
 
 func StoreTransactions(ctx context.Context, transactions []*Transaction) error {
 	return db.NewInsert().Model(transactions).Scan(ctx)
+}
+
+func UpdateTransactions(ctx context.Context, transactions []*UpdateTransactionParams) error {
+	return nil
+}
+
+func DeleteTransactions(ctx context.Context, ids []string) error {
+	return db.NewDelete().Model((*Transaction)(nil)).Where("id IN ?", ids).Scan(ctx)
 }
