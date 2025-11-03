@@ -261,30 +261,29 @@ func (w *TransactionsWorker) syncAddedTransactionsFromPlaid() error {
 }
 
 func (w *TransactionsWorker) syncModifiedTransactionsFromPlaid() error {
-	// for {
-	// 	select {
-	// 	case <-w.gCtx.Done():
-	// 		slog.Debug("group context cancelled, recorded in syncing modified transactions routine", "error", w.gCtx.Err(), "item id", w.itemID)
-	// 		return w.gCtx.Err()
-	// 	case modifiedTransactions, ok := <-w.modifiedChan:
-	// 		if !ok {
-	// 			slog.Debug("modifiedChan closed", "error")
-	// 		}
-	// 		// parse plaid transactions into purch transaction
-	// 		transactions := make([]*database.Transaction, len(modifiedTransactions))
-	// 		for i := range transactions {
-	// 			transactions[i] = parsePlaidTransaction(modifiedTransactions[i])
-	// 		}
-	// 		// persist transactions for the user
-	// 		if err := database.UpdateTransactions(w.gCtx, transactions); err != nil {
-	// 			slog.Error("error updating user's transactions", "error", err.Error(), "itemID", w.itemID)
-	// 		}
-	// 	default:
-	// 		slog.Debug("exiting modified transactions routine", "item id", w.itemID)
-	// 		return nil
-	// 	}
-	// }
-	return nil
+	for {
+		select {
+		case <-w.gCtx.Done():
+			slog.Debug("group context cancelled, recorded in syncing modified transactions routine", "error", w.gCtx.Err(), "item id", w.itemID)
+			return w.gCtx.Err()
+		case modifiedTransactions, ok := <-w.modifiedChan:
+			if !ok {
+				slog.Debug("modifiedChan closed", "error")
+			}
+			// parse plaid transactions into purch transaction
+			transactions := make([]*database.Transaction, len(modifiedTransactions))
+			for i := range transactions {
+				transactions[i] = parseModifiedPlaidTransaction(modifiedTransactions[i])
+			}
+			// persist transactions for the user
+			if err := database.UpdateTransactions(w.gCtx, transactions); err != nil {
+				slog.Error("error updating user's transactions", "error", err.Error(), "itemID", w.itemID)
+			}
+		default:
+			slog.Debug("exiting modified transactions routine", "item id", w.itemID)
+			return nil
+		}
+	}
 }
 
 
@@ -303,6 +302,13 @@ func (w *TransactionsWorker) syncRemovedTransactionsFromPlaid() error {
 			for i := range removedTransactions {
 				removedTransactions[i] = removedPlaidTransactions[i].GetTransactionId()
 			}
+			if err := database.DeleteTransactions(w.gCtx, removedTransactions); err != nil {
+				slog.Error("error deleting removed transactions", "error", err.Error(), "itemID", w.itemID)
+				return err
+			}
+		default:
+			slog.Debug("exiting removed transactions routine", "item id", w.itemID)
+			return nil
 		}
 	}
 }
@@ -338,8 +344,15 @@ func parsePlaidTransaction(transaction plaid.Transaction) *database.Transaction 
 	return &t
 }
 
-func parsePlaidModifiedTransactions(transaction plaid.Transaction) *database.UpdateTransactionParams {
-	return nil
+func parseModifiedPlaidTransaction(transaction plaid.Transaction) *database.Transaction {
+	var t database.Transaction
+
+	t.ID = transaction.GetTransactionId()
+	settledDate := transaction.GetDatetime()
+	t.SettledDate = &settledDate
+	t.Pending = transaction.GetPending()
+
+	return &t
 }
 
 // func SyncTransactions(

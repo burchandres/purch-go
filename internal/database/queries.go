@@ -164,8 +164,19 @@ func StoreTransactions(ctx context.Context, transactions []*Transaction) error {
 	return db.NewInsert().Model(transactions).Scan(ctx)
 }
 
-func UpdateTransactions(ctx context.Context, transactions []*UpdateTransactionParams) error {
-	return nil
+// Bulk update transactions. Updates their amount, settled_date and pending status.
+// Requires the inputted list to have those fields populated so data doesn't become corrupted along with transaction id.
+func UpdateTransactions(ctx context.Context, transactions []*Transaction) error {
+	values := db.NewValues(&transactions)
+	return db.NewUpdate().
+		With("_data", values).
+		Model((*Transaction)(nil)).
+		TableExpr("_data").
+		Set("amount = _data.amount").
+		Set("settled_date = _data.settled_date").
+		Set("pending = _data.pending").
+		Where("id = _data.id").
+		Scan(ctx)
 }
 
 func DeleteTransactions(ctx context.Context, ids []string) error {
