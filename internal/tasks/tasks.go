@@ -122,8 +122,7 @@ func SyncTransactions(
 	cursor string,
 ) error {
 	worker := NewTransactionsWorker(ctx, itemID, accessToken, cursor)
-	worker.Start()
-	return worker.Wait()
+	return worker.Work()
 }
 
 type TransactionsWorker struct {
@@ -131,192 +130,96 @@ type TransactionsWorker struct {
 	accessToken string
 	cursor      string
 	ctx         context.Context
-
-	g    *errgroup.Group
-	gCtx context.Context
-
-	addedChan    chan []plaid.Transaction
-	modifiedChan chan []plaid.Transaction
-	removedChan  chan []plaid.RemovedTransaction
 }
 
 func NewTransactionsWorker(ctx context.Context, itemID, accessToken, cursor string) *TransactionsWorker {
-	g, gCtx := errgroup.WithContext(ctx)
 	return &TransactionsWorker{
 		itemID:       itemID,
 		accessToken:  accessToken,
 		cursor:       cursor,
-		g:            g,
-		gCtx:         gCtx,
 		ctx:          ctx,
-		addedChan:    make(chan []plaid.Transaction),
-		modifiedChan: make(chan []plaid.Transaction),
-		removedChan:  make(chan []plaid.RemovedTransaction),
 	}
 }
 
-func (w *TransactionsWorker) Start() {
-	w.g.Go(func() error {
-		return w.pullTransactionsFromPlaid()
-	})
-	w.g.Go(func() error {
-		return w.syncAddedTransactionsFromPlaid()
-	})
-	w.g.Go(func() error {
-		return w.syncModifiedTransactionsFromPlaid()
-	})
-	w.g.Go(func() error {
-		return w.syncRemovedTransactionsFromPlaid()
-	})
-}
-
-func (w *TransactionsWorker) Wait() error {
-	err := w.g.Wait()
-	w.shutdown()
-	if err := database.UpdateItemCursor(w.ctx, w.cursor, w.itemID); err != nil {
-		slog.Error("error updating item cursor upon transaction worker shutdown", "error", err.Error(), "item id", w.itemID, "cursor", w.cursor)
-	}
-	return err
-}
-
-func (w *TransactionsWorker) shutdown() {
-	// check if any of the channels aren't closed and close them
-	if _, ok := <-w.addedChan; ok {
-		close(w.addedChan)
-	}
-	if _, ok := <-w.modifiedChan; ok {
-		close(w.modifiedChan)
-	}
-	if _, ok := <-w.removedChan; ok {
-		close(w.removedChan)
-	}
-}
-
-func (w *TransactionsWorker) pullTransactionsFromPlaid() error {
-	// use this link: https://github.com/plaid/plaid-go/blob/master/plaid/model_transaction.go
-	// and this link: https://plaid.com/docs/api/products/transactions/#transactionssync
-	hasMore := true
-	// create TransactionsSyncRequest
+func (w *TransactionsWorker) Work() error {
 	plaidClient := utils.GetPlaidClient()
 	transactionsSyncRequest := plaid.NewTransactionsSyncRequest(w.accessToken)
+	hasMore := true
+	nextCursor := w.cursor
 	for hasMore {
-		select {
-		case <-w.gCtx.Done():
-			slog.Debug("group context cancelled, recorded in pulling transactions", "error", w.gCtx.Err(), "itemID", w.itemID)
-			return w.gCtx.Err()
-		default:
-			// set cursor value
-			transactionsSyncRequest.SetCursor(w.cursor)
-			// execute TransactionsSyncRequest
-			transactionsSyncResp, _, err := plaidClient.PlaidApi.TransactionsSync(w.gCtx).TransactionsSyncRequest(*transactionsSyncRequest).Execute()
-			if err != nil {
-				slog.Error("error pulling transactions", "itemID", w.itemID, "cursor", w.cursor)
-				return ErrRequestingTransactions
-			}
-			// update hasMore and transaction cursor
-			hasMore = transactionsSyncResp.GetHasMore()
-			w.cursor = transactionsSyncResp.GetNextCursor()
-			// send added transactions for processing
-			added := transactionsSyncResp.GetAdded()
-			if len(added) == 0 {
-				close(w.addedChan)
-			} else {
-				w.addedChan <- added
-			}
-			// send modified transactions for processing
-			modified := transactionsSyncResp.GetModified()
-			if len(modified) == 0 {
-				close(w.modifiedChan)
-			} else {
-				w.modifiedChan <- modified
-			}
-			// send removed transactions for processing
-			removed := transactionsSyncResp.GetRemoved()
-			if len(removed) == 0 {
-				close(w.removedChan)
-			} else {
-				w.removedChan <- removed
-			}
-
+		// set cursor value
+		transactionsSyncRequest.SetCursor(nextCursor)
+		// execute TransactionsSyncRequest
+		transactionsSyncResp, _, err := plaidClient.PlaidApi.TransactionsSync(w.ctx).TransactionsSyncRequest(*transactionsSyncRequest).Execute()
+		if err != nil {
+			slog.Error("error pulling transactions", "error", err.Error(), "itemID", w.itemID, "cursor", nextCursor)
+			break
 		}
+		// send transactions for processing
+		g, ctx := errgroup.WithContext(w.ctx)
+		// process newly added transactions
+		g.Go(func() error {
+			return w.syncAddedTransactionsFromPlaid(ctx, transactionsSyncResp.GetAdded())
+		})
+		// process modified transactions
+		g.Go(func() error {
+			return w.syncModifiedTransactionsFromPlaid(ctx, transactionsSyncResp.GetModified())
+		})
+		// process removed transactions
+		g.Go(func() error {
+			return w.syncRemovedTransactionsFromPlaid(ctx, transactionsSyncResp.GetRemoved())
+		})
+		// wait for the three goroutines to finish incase we need to break and restart at another time from the recorded cursor
+		if err := g.Wait(); err != nil {
+			slog.Error("error syncing transactions from plaid", "error", err.Error(), "item-id", w.itemID)
+			break
+		}
+		// update hasMore and transaction cursor
+		hasMore = transactionsSyncResp.GetHasMore()
+		nextCursor = w.cursor
+	}
+	// update cursor for item after syncing all transactions
+	return database.UpdateItemCursor(w.ctx, w.cursor, w.itemID)
+}
+
+func (w *TransactionsWorker) syncAddedTransactionsFromPlaid(ctx context.Context, addedTransactions []plaid.Transaction) error {
+	// parse plaid transactions into purch transaction
+	transactions := make([]*database.Transaction, len(addedTransactions))
+	for i := range transactions {
+		transactions[i] = parsePlaidTransaction(addedTransactions[i])
+	}
+	// persist transactions for the user
+	if err := database.StoreTransactions(ctx, transactions); err != nil {
+		slog.Error("error persisting user's transactions", "error", err.Error(), "item-id", w.itemID)
+		return err
 	}
 	return nil
 }
 
-func (w *TransactionsWorker) syncAddedTransactionsFromPlaid() error {
-	for {
-		select {
-		case <-w.gCtx.Done():
-			slog.Debug("group context cancelled, recorded in syncing added transactions routine", "error", w.gCtx.Err(), "itemID", w.itemID)
-			return w.gCtx.Err()
-		case addedTransactions := <-w.addedChan:
-			// parse plaid transactions into purch transaction
-			transactions := make([]*database.Transaction, len(addedTransactions))
-			for i := range transactions {
-				transactions[i] = parsePlaidTransaction(addedTransactions[i])
-			}
-			// persist transactions for the user
-			if err := database.StoreTransactions(w.gCtx, transactions); err != nil {
-				slog.Error("error persisting user's transactions", "error", err.Error(), "itemID", w.itemID)
-			}
-		default:
-			slog.Debug("addedChan is closed and group context is still valid, exiting add transactions routine", "itemID", w.itemID)
-			return nil
-		}
+func (w *TransactionsWorker) syncModifiedTransactionsFromPlaid(ctx context.Context, modifiedTransactions []plaid.Transaction) error {
+	// parse plaid transactions into purch transaction
+	transactions := make([]*database.Transaction, len(modifiedTransactions))
+	for i := range transactions {
+		transactions[i] = parseModifiedPlaidTransaction(modifiedTransactions[i])
 	}
+	// persist transactions for the user
+	if err := database.UpdateTransactions(ctx, transactions); err != nil {
+		slog.Error("error updating user's transactions", "error", err.Error(), "item-id", w.itemID)
+		return err
+	}
+	return nil
 }
 
-func (w *TransactionsWorker) syncModifiedTransactionsFromPlaid() error {
-	for {
-		select {
-		case <-w.gCtx.Done():
-			slog.Debug("group context cancelled, recorded in syncing modified transactions routine", "error", w.gCtx.Err(), "item id", w.itemID)
-			return w.gCtx.Err()
-		case modifiedTransactions, ok := <-w.modifiedChan:
-			if !ok {
-				slog.Debug("modifiedChan closed, exiting syncing modified transactions routine", "item id", w.itemID)
-				return nil
-			}
-			// parse plaid transactions into purch transaction
-			transactions := make([]*database.Transaction, len(modifiedTransactions))
-			for i := range transactions {
-				transactions[i] = parseModifiedPlaidTransaction(modifiedTransactions[i])
-			}
-			// persist transactions for the user
-			if err := database.UpdateTransactions(w.gCtx, transactions); err != nil {
-				slog.Error("error updating user's transactions", "error", err.Error(), "itemID", w.itemID)
-			}
-		default:
-			slog.Debug("exiting modified transactions routine", "item id", w.itemID)
-			return nil
-		}
+func (w *TransactionsWorker) syncRemovedTransactionsFromPlaid(ctx context.Context, removedTransactions []plaid.RemovedTransaction) error {
+	transactions := make([]string, len(removedTransactions))
+	for i := range transactions {
+		transactions[i] = removedTransactions[i].GetTransactionId()
 	}
-}
-
-func (w *TransactionsWorker) syncRemovedTransactionsFromPlaid() error {
-	for {
-		select {
-		case <-w.gCtx.Done():
-			slog.Debug("group context cancelled, recorded in syncing removed transactions routine", "error", w.gCtx.Err(), "item id", w.itemID)
-			return w.gCtx.Err()
-		case removedPlaidTransactions, ok := <-w.removedChan:
-			if !ok {
-				slog.Debug("removedChan closed, exiting syncing removed transactions routine")
-				return nil
-			}
-			removedTransactions := make([]string, len(removedPlaidTransactions))
-			for i := range removedTransactions {
-				removedTransactions[i] = removedPlaidTransactions[i].GetTransactionId()
-			}
-			if err := database.DeleteTransactions(w.gCtx, removedTransactions); err != nil {
-				slog.Error("error deleting removed transactions", "error", err.Error(), "itemID", w.itemID)
-				return err
-			}
-		default:
-			slog.Debug("exiting removed transactions routine", "item id", w.itemID)
-			return nil
-		}
+	if err := database.DeleteTransactions(ctx, transactions); err != nil {
+		slog.Error("error deleting removed transactions", "error", err.Error(), "item-id", w.itemID)
+		return err
 	}
+	return nil
 }
 
 func parsePlaidTransaction(transaction plaid.Transaction) *database.Transaction {
