@@ -209,7 +209,7 @@ func exchangePublicToken(c *gin.Context) {
 	publicToken := c.Query("public_token")
 	if publicToken == "" {
 		slog.Error("public token not found in query params.", "userID", userID)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "public token not provided in query params as public_token"})
+		c.JSON(http.StatusBadRequest, "public token not provided in query params as public_token")
 		return
 	}
 

@@ -42,22 +42,10 @@ type Config struct {
 }
 
 func (c *Config) GetPlaidCountryCodes() []plaid.CountryCode {
-	// countryCodes := strings.Split(c.PlaidCountryCodes, ",")
-	// var codes []plaid.CountryCode
-	// for _, code := range countryCodes {
-	// 	codes = append(codes, plaid.CountryCode(code))
-	// }
-	// return codes
 	return []plaid.CountryCode{plaid.COUNTRYCODE_US}
 }
 
 func (c *Config) GetPlaidProducts() []plaid.Products {
-	// plaidProducts := strings.Split(c.PlaidProducts, ",")
-	// var products []plaid.Products
-	// for _, product := range plaidProducts {
-	// 	products = append(products, plaid.Products(product))
-	// }
-	// return products
 	return []plaid.Products{plaid.PRODUCTS_AUTH, plaid.PRODUCTS_TRANSACTIONS}
 }
 
@@ -72,17 +60,21 @@ func loadConfig() *Config {
 	// should be developing against docker deployment
 	// but also pull from .env file if it exists
 	// don't panic if nothing exists stuff will just break
-	_ = godotenv.Load("/run/secrets/env")
-	_ = godotenv.Load(".env")
+	_ = godotenv.Load(
+		"/run/secrets/env", 
+		".env",
+		"../.env",
+		"../../.env",
+	)
 
 	config := &Config{
 		LogLevel:            getEnvVar("LOG_LEVEL", "DEBUG"),
 		PostgresUrl:         getEnvVar("POSTGRES_URL", "postgres://postgres:password@postgres:5432/purch?sslmode=disable"),
 		SecretKey:           getEnvVar("SECRET_KEY", ""),
 		EncryptionAlgorithm: getEnvVar("ENCRYPTION_ALGORITHM", "HS256"),
-		PlaidClientID:       getEnvVar("PLAID_CLIENT_ID", "client_id"),
-		PlaidSecret:         getEnvVar("PLAID_SECRET", "secret"),
-		PlaidEnv:            getEnvVar("PLAID_ENV", "sandbox"),
+		PlaidClientID:       getEnvVar("PLAID_CLIENT_ID", ""),
+		PlaidSecret:         getEnvVar("PLAID_SECRET", ""),
+		PlaidEnv:            getEnvVar("PLAID_ENV", "saandbox"),
 		PlaidProducts:       getEnvVar("PLAID_PRODUCTS", "auth,transactions"),
 		PlaidCountryCodes:   getEnvVar("PLAID_COUNTRY_CODES", "US"),
 		PlaidLanguage:       getEnvVar("PLAID_LANGUAGE", "en"),
