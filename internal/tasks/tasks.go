@@ -29,6 +29,18 @@ var (
 	ErrStoringTransactions    = errors.New("error storing transactions")
 )
 
+/* 
+Used to sync a user's bank, bank accounts and transactions
+upon initial registration with Purch.
+
+Synchronously it will:
+
+  - Retrieve and store the item (i.e. Bank like "Wells Fargo")
+
+  - Retrieve all accounts the user chose to link with that item
+
+  - Retreive all transactions for those accounts
+*/ 
 func SyncItemAccountsTransactionsPipeline(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -47,6 +59,7 @@ func SyncItemAccountsTransactionsPipeline(
 	return nil
 }
 
+// Single routine to retrieve an item associated with the provided accessToken
 func SyncItem(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -79,6 +92,7 @@ func SyncItem(
 	return nil
 }
 
+// Single routine to retrieve all accounts selected associated with the accessToken
 func SyncAccounts(
 	ctx context.Context,
 	itemID string,
@@ -115,6 +129,7 @@ func SyncAccounts(
 	return database.StoreAccounts(ctx, accountsToStore)
 }
 
+// A single routine to retrieve all transactions associated with the accounts selected for the accessToken
 func SyncTransactions(
 	ctx context.Context,
 	itemID string,
