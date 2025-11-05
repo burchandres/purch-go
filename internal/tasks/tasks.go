@@ -183,6 +183,9 @@ func (w *TransactionsWorker) Work() error {
 }
 
 func (w *TransactionsWorker) syncAddedTransactionsFromPlaid(ctx context.Context, addedTransactions []plaid.Transaction) error {
+	if len(addedTransactions) == 0 {
+		return nil
+	}
 	// parse plaid transactions into purch transaction
 	transactions := make([]database.Transaction, len(addedTransactions))
 	for i := range transactions {
@@ -197,6 +200,9 @@ func (w *TransactionsWorker) syncAddedTransactionsFromPlaid(ctx context.Context,
 }
 
 func (w *TransactionsWorker) syncModifiedTransactionsFromPlaid(ctx context.Context, modifiedTransactions []plaid.Transaction) error {
+	if len(modifiedTransactions) == 0 {
+		return nil
+	}
 	// parse plaid transactions into purch transaction
 	transactions := make([]database.Transaction, len(modifiedTransactions))
 	for i := range transactions {
@@ -211,6 +217,10 @@ func (w *TransactionsWorker) syncModifiedTransactionsFromPlaid(ctx context.Conte
 }
 
 func (w *TransactionsWorker) syncRemovedTransactionsFromPlaid(ctx context.Context, removedTransactions []plaid.RemovedTransaction) error {
+	if len(removedTransactions) == 0 {
+		return nil
+	}
+	// parse transactions for the transaction ids of the ones to be deleted
 	transactions := make([]string, len(removedTransactions))
 	for i := range transactions {
 		transactions[i] = removedTransactions[i].GetTransactionId()

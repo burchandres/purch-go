@@ -217,4 +217,8 @@ func TestSyncTransactions(t *testing.T) {
 		t.Logf("error pulling transactions persisted in SyncTransactions task in TestSyncTransactions: %v", err)
 	}
 	assert.NotEmpty(t, transactions)
+	t.Cleanup(func() {
+		// delete user and everything follows due to cascading deletes
+		database.DeleteUser(ctx, testUser)
+	})
 }
