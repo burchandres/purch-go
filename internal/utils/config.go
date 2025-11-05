@@ -60,12 +60,15 @@ func loadConfig() *Config {
 	// should be developing against docker deployment
 	// but also pull from .env file if it exists
 	// don't panic if nothing exists stuff will just break
-	_ = godotenv.Load(
+	err := godotenv.Load(
 		"/run/secrets/env", 
 		".env",
 		"../.env",
 		"../../.env",
 	)
+	if err != nil {
+		slog.Error("error loading config files", "error", err.Error())
+	}
 
 	config := &Config{
 		LogLevel:            getEnvVar("LOG_LEVEL", "DEBUG"),

@@ -101,7 +101,7 @@ func SyncAccounts(
 		return ErrRequestingAccounts
 	}
 	// bulk insert accounts
-	accountsToStore := make([]*database.Account, len(*accounts))
+	accountsToStore := make([]database.Account, len(*accounts))
 	for i, account := range *accounts {
 		var storeAccountParams database.Account
 
@@ -109,7 +109,7 @@ func SyncAccounts(
 		storeAccountParams.ItemID = itemID
 		storeAccountParams.Name = account.GetName()
 
-		accountsToStore[i] = &storeAccountParams
+		accountsToStore[i] = storeAccountParams
 	}
 
 	return database.StoreAccounts(ctx, accountsToStore)
@@ -184,7 +184,7 @@ func (w *TransactionsWorker) Work() error {
 
 func (w *TransactionsWorker) syncAddedTransactionsFromPlaid(ctx context.Context, addedTransactions []plaid.Transaction) error {
 	// parse plaid transactions into purch transaction
-	transactions := make([]*database.Transaction, len(addedTransactions))
+	transactions := make([]database.Transaction, len(addedTransactions))
 	for i := range transactions {
 		transactions[i] = parsePlaidTransaction(addedTransactions[i])
 	}
@@ -198,7 +198,7 @@ func (w *TransactionsWorker) syncAddedTransactionsFromPlaid(ctx context.Context,
 
 func (w *TransactionsWorker) syncModifiedTransactionsFromPlaid(ctx context.Context, modifiedTransactions []plaid.Transaction) error {
 	// parse plaid transactions into purch transaction
-	transactions := make([]*database.Transaction, len(modifiedTransactions))
+	transactions := make([]database.Transaction, len(modifiedTransactions))
 	for i := range transactions {
 		transactions[i] = parseModifiedPlaidTransaction(modifiedTransactions[i])
 	}
@@ -222,7 +222,7 @@ func (w *TransactionsWorker) syncRemovedTransactionsFromPlaid(ctx context.Contex
 	return nil
 }
 
-func parsePlaidTransaction(transaction plaid.Transaction) *database.Transaction {
+func parsePlaidTransaction(transaction plaid.Transaction) database.Transaction {
 	var t database.Transaction
 	// tx id and account id
 	t.ID = transaction.GetTransactionId()
@@ -249,10 +249,10 @@ func parsePlaidTransaction(transaction plaid.Transaction) *database.Transaction 
 	// pending
 	t.Pending = transaction.GetPending()
 
-	return &t
+	return t
 }
 
-func parseModifiedPlaidTransaction(transaction plaid.Transaction) *database.Transaction {
+func parseModifiedPlaidTransaction(transaction plaid.Transaction) database.Transaction {
 	var t database.Transaction
 
 	t.ID = transaction.GetTransactionId()
@@ -260,5 +260,5 @@ func parseModifiedPlaidTransaction(transaction plaid.Transaction) *database.Tran
 	t.SettledDate = &settledDate
 	t.Pending = transaction.GetPending()
 
-	return &t
+	return t
 }

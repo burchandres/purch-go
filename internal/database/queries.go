@@ -127,7 +127,7 @@ func GetItem(ctx context.Context, id string) (Item, error) {
 func UpdateItemCursor(ctx context.Context, cursor, itemID string) error {
 	return db.NewUpdate().
 		Model((*Item)(nil)).
-		Set("cursor = ?", cursor).
+		Set("transaction_cursor = ?", cursor).
 		Where("id = ?", itemID).
 		Scan(ctx)
 }
@@ -153,8 +153,8 @@ func StoreAccount(ctx context.Context, account Account) error {
 }
 
 // Batch insert a slice of accounts
-func StoreAccounts(ctx context.Context, accounts []*Account) error {
-	return db.NewInsert().Model(accounts).Scan(ctx)
+func StoreAccounts(ctx context.Context, accounts []Account) error {
+	return db.NewInsert().Model(&accounts).Scan(ctx)
 }
 
 // -------- Transaction Queries --------
@@ -168,13 +168,13 @@ func GetTransaction(ctx context.Context, id string) (Transaction, error) {
 	return transaction, err
 }
 
-func StoreTransactions(ctx context.Context, transactions []*Transaction) error {
-	return db.NewInsert().Model(transactions).Scan(ctx)
+func StoreTransactions(ctx context.Context, transactions []Transaction) error {
+	return db.NewInsert().Model(&transactions).Scan(ctx)
 }
 
 // Bulk update transactions. Updates their amount, settled_date and pending status.
 // Requires the inputted list to have those fields populated so data doesn't become corrupted along with transaction id.
-func UpdateTransactions(ctx context.Context, transactions []*Transaction) error {
+func UpdateTransactions(ctx context.Context, transactions []Transaction) error {
 	values := db.NewValues(&transactions)
 	return db.NewUpdate().
 		With("_data", values).
