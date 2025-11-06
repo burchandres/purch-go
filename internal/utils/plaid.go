@@ -4,6 +4,8 @@ import (
 	"sync"
 
 	"github.com/plaid/plaid-go/v40/plaid"
+	
+	"purch/internal/config"
 )
 
 var (
@@ -13,7 +15,7 @@ var (
 
 func GetPlaidClient() *plaid.APIClient {
 	plaidOnce.Do(func() {
-		config := GetConfig()
+		config := config.GetConfig()
 		// setup plaid configuration
 		configuration := plaid.NewConfiguration()
 		configuration.AddDefaultHeader("PLAID-CLIENT-ID", config.PlaidClientID)

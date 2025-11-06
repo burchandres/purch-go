@@ -13,7 +13,7 @@ import (
 
 	"purch/internal/api"
 	"purch/internal/database"
-	"purch/internal/utils"
+	"purch/internal/config"
 )
 
 var slogLevels = map[string]slog.Level{
@@ -25,7 +25,7 @@ var slogLevels = map[string]slog.Level{
 
 func main() {
 	// get service configurations
-	config := utils.GetConfig()
+	config := config.GetConfig()
 	// configure logging with config.LogLevel
 	configureLogging(config.LogLevel)
 	slog.Debug("loaded config.", "config", *config)

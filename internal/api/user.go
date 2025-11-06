@@ -11,6 +11,7 @@ import (
 	"purch/internal/database"
 	"purch/internal/tasks"
 	"purch/internal/utils"
+	"purch/internal/config"
 )
 
 func SetupUserEndpoints(r *gin.Engine) {
@@ -170,7 +171,7 @@ func getLinkToken(c *gin.Context) {
 	user, _ := c.Get("user")
 	userID := user.(database.User).ID.String()
 	plaidClient := utils.GetPlaidClient()
-	config := utils.GetConfig()
+	config := config.GetConfig()
 
 	requestUser := plaid.NewLinkTokenCreateRequestUser(userID)
 

@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"purch/internal/database"
-	"purch/internal/utils"
+	"purch/internal/config"
 )
 
 // Claims represents the JWT claims
@@ -24,7 +24,7 @@ type Claims struct {
 
 // CreateToken generates a JWT token and returns it as a string
 func createToken(userID string) (string, error) {
-	config := utils.GetConfig()
+	config := config.GetConfig()
 	issuedAt := time.Now()
 	expiresAt := time.Now().Add(30 * time.Minute)
 
@@ -49,7 +49,7 @@ func createToken(userID string) (string, error) {
 // ParseToken validates and parses a JWT token string
 func parseToken(tokenString string) (*Claims, error) {
 	claims := &Claims{}
-	config := utils.GetConfig()
+	config := config.GetConfig()
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

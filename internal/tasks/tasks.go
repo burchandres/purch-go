@@ -40,7 +40,7 @@ Synchronously it will:
   - Retrieve all accounts the user chose to link with that item
 
   - Retreive all transactions for those accounts
-*/ 
+*/
 func SyncItemAccountsTransactionsPipeline(
 	ctx context.Context,
 	userID uuid.UUID,
