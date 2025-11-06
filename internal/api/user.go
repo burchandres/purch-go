@@ -180,10 +180,31 @@ func getLinkToken(c *gin.Context) {
 		"en",
 		config.GetPlaidCountryCodes(),
 	)
+	// Tell plaid we want 6 months of transactions for trends
+	var daysRequested int32 = 180
+	transactions := plaid.LinkTokenTransactions{
+		DaysRequested: &daysRequested,
+	}
+	// Tell plaid we only want checkings, savings or credit cards for now
+	depository := plaid.DepositoryFilter{
+		AccountSubtypes: []plaid.DepositoryAccountSubtype{
+			plaid.DEPOSITORYACCOUNTSUBTYPE_CHECKING,
+			plaid.DEPOSITORYACCOUNTSUBTYPE_SAVINGS,
+		},
+	}
+	credit := plaid.CreditFilter{
+		AccountSubtypes: []plaid.CreditAccountSubtype{plaid.CREDITACCOUNTSUBTYPE_CREDIT_CARD},
+	}
+	accountFilters := plaid.LinkTokenAccountFilters{
+		Depository: &depository,
+		Credit: &credit,
+	}
 
 	request.SetUser(*requestUser)
 	request.SetProducts(config.GetPlaidProducts())
 	request.SetRedirectUri(config.PlaidRedirectUri)
+	request.SetTransactions(transactions)
+	request.SetAccountFilters(accountFilters)
 	// request.SetWebhook()
 
 	resp, _, err := plaidClient.PlaidApi.LinkTokenCreate(c.Request.Context()).LinkTokenCreateRequest(*request).Execute()

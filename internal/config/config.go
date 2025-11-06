@@ -39,6 +39,7 @@ type Config struct {
 	PlaidCountryCodes string
 	PlaidLanguage     string
 	PlaidRedirectUri  string
+	// WebhookUrl        string
 }
 
 func (c *Config) GetPlaidCountryCodes() []plaid.CountryCode {
@@ -82,6 +83,7 @@ func loadConfig() *Config {
 		PlaidCountryCodes:   getEnvVar("PLAID_COUNTRY_CODES", "US"),
 		PlaidLanguage:       getEnvVar("PLAID_LANGUAGE", "en"),
 		PlaidRedirectUri:    getEnvVar("PLAID_REDIRECT_URI", "http://localhost:5173/dashboard"),
+		// WebhookUrl:          getEnvVar("WEBHOOK_URL", "http://localhost:8080/budget/")
 	}
 
 	return config
