@@ -42,6 +42,7 @@ func getItems(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error pulling user items..."})
 		return
 	}
+	// decrypt
 	c.JSON(http.StatusOK, items)
 }
 

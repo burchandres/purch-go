@@ -25,7 +25,7 @@ SET row_security = off;
 
 INSERT INTO public.items (id, user_id, access_token, name, transaction_cursor) VALUES ('C1-id', 'df901f07-7314-41b7-880c-1230038a328e', 'C1-token', 'Capital One', 'C1-cursor');
 INSERT INTO public.items (id, user_id, access_token, name, transaction_cursor) VALUES ('WF-id', 'df901f07-7314-41b7-880c-1230038a328e', 'WF-token', 'Wells Fargo', 'WF-cursor');
-INSERT INTO public.items (id, user_id, access_token, name, transaction_cursor) VALUES ('l33MWowj6xF91qWEeZrMho5XME16vBiZLae7e', 'b723a5fc-190f-41b0-95da-8cbc014cbafa', 'access-sandbox-197bccf6-8363-47a3-9b7d-ec915e3572e6', 'First Platypus Bank', 'CAESJThYWEJ3UG5BZ2V1bERWV0pxZ1A3dG9KVzQzUEVEcmhaWGVrRWsaDAiUrb7IBhCgicfGAiIMCJStvsgGEKCJx8YCKgwIlK2+yAYQoInHxgI=');
+INSERT INTO public.items (id, user_id, access_token, name, transaction_cursor) VALUES ('l33MWowj6xF91qWEeZrMho5XME16vBiZLae7e', 'b723a5fc-190f-41b0-95da-8cbc014cbafa', '$2a$12$2OkcGlOgSETI7.0OJTd.s.vcBzkrAe3iLczGzh.X6iZWm26WObr4W', 'First Platypus Bank', 'CAESJThYWEJ3UG5BZ2V1bERWV0pxZ1A3dG9KVzQzUEVEcmhaWGVrRWsaDAiUrb7IBhCgicfGAiIMCJStvsgGEKCJx8YCKgwIlK2+yAYQoInHxgI=');
 
 
 --

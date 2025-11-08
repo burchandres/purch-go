@@ -25,7 +25,7 @@ SET row_security = off;
 
 INSERT INTO public.accounts (id, item_id, name, available_balance, current_balance, type, sub_type) VALUES ('C1-id-checking', 'C1-id', 'Young Adult Checking', 100, 150, 'Depository', 'Checking');
 INSERT INTO public.accounts (id, item_id, name, available_balance, current_balance, type, sub_type) VALUES ('WF-id-credit-card', 'WF-id', 'Active Cash Credit Card', 100, 900, 'Credit', '');
-INSERT INTO public.accounts (id, item_id, name, available_balance, current_balance, type, sub_type) VALUES ('xMMbBmNyv1CmDq6VRkWbT13Ao8mJwESyE3vxN', 'l33MWowj6xF91qWEeZrMho5XME16vBiZLae7e', 'Checking', NULL, NULL, '', NULL);
+INSERT INTO public.accounts (id, item_id, name, available_balance, current_balance, type, sub_type) VALUES ('xMMbBmNyv1CmDq6VRkWbT13Ao8mJwESyE3vxN', 'l33MWowj6xF91qWEeZrMho5XME16vBiZLae7e', 'Checking Account', 100, 900, 'Depository', 'Checking');
 
 
 --

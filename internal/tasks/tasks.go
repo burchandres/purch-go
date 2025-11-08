@@ -7,8 +7,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/plaid/plaid-go/v40/plaid"
+	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/sync/errgroup"
 
+	"purch/internal/config"
 	"purch/internal/database"
 	"purch/internal/utils"
 )
@@ -19,8 +21,9 @@ const (
 )
 
 var (
-	ErrRequestingItem = errors.New("error requesting new item information")
-	ErrStoringItem    = errors.New("error storing new item information")
+	ErrRequestingItem     = errors.New("error requesting new item information")
+	ErrStoringItem        = errors.New("error storing new item information")
+	ErrHashingAccessToken = errors.New("error hashing access token for storage")
 
 	ErrRequestingAccounts = errors.New("error requesting new accounts information")
 	ErrStoringAccounts    = errors.New("error storing new accounts information")
@@ -66,6 +69,7 @@ func SyncItem(
 	itemID string,
 	accessToken string,
 ) error {
+	config := config.GetConfig()
 	plaidClient := utils.GetPlaidClient()
 	slog.Debug("pulling item info from plaid for local persistence.", "itemID", itemID, "userID", userID)
 	// create itemGetRequest
@@ -80,7 +84,14 @@ func SyncItem(
 	// create query params for storing item
 	var itemParams database.Item
 	itemParams.ID = itemID
-	itemParams.AccessToken = accessToken
+	
+	hashedAccessToken, err := bcrypt.GenerateFromPassword([]byte(accessToken), config.BcryptCost)
+	if err != nil {
+		slog.Error("error hashing access token for item", "item-id", itemID, "user-id", userID)
+		return ErrHashingAccessToken
+	}
+	itemParams.AccessToken = string(hashedAccessToken)
+	
 	itemParams.UserID = userID
 	itemParams.Name = item.GetInstitutionName()
 	// store the item
