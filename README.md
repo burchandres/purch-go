@@ -16,16 +16,17 @@ followed by
 task up
 ```
 
-and that should spin up the `service-purch` and `postgres` containers.
+and that should spin up the `service-purch`, `service-purch-webhook` and `postgres` containers.
+
+The `service-purch-webhook` binary is compiled from the `webhook/cmd/main.go` file, and the `service-purch` binary is compiled from the root `main.go` file.  The `service-purch-webhook` server exists on a separate port so that when exposed to the internet for plaid webhook integration the main server doesn't get DDOS'd.
 
 # Feature list
 
-This is meant to serve as a budgeting application first that integrates with [Plaid](https://plaid.com/docs/), providing balances for connected bank accounts and aggregating transactions according to user defined categories.
+This is meant to serve as a budgeting application that integrates with [Plaid](https://plaid.com/docs/), providing balances for connected bank accounts and aggregating transactions according to user defined categories.
 
-1. All written in [go](https://go.dev/) with gin as the API framework for performance and maintainability.
-2. Persists a user's transactions provided by plaid to power custom made analytics to help empower a user's financial decision making.
-3. Allows users to define custom categories where we use semantic search* to align a transaction's plaid provided cateogry label with user defined categories to customize this for the user as much as possible.
-4. Allows a user to help mark transactions that were split and what portion of that transaction they're truly responsible for so we can gather accurate trends and provide more tailored recommendations.*
-5. 
+1. All written in [go](https://go.dev/) with gin as the API framework for performance and maintainability and postgres as the transactional database for user data persistence.
+2. Allows users to define custom categories where we use semantic search* to align a transaction's plaid provided cateogry label with user defined categories to customize this for the user as much as possible.
+3. Allows a user to help mark transactions that were split and what portion of that transaction they're truly responsible for so we can gather accurate trends and provide more tailored recommendations.*
+4. Supports checking, savings and credit card accounts.
 
 *= Not yet implemented but on the roadmap for development :)

@@ -2,7 +2,7 @@ version: '3'
 
 tasks:
   # ------- Docker commands -------
-  build:
+  build: ## Build the docker images
     cmds:
       - docker compose build
       
@@ -10,7 +10,7 @@ tasks:
   # of individual services to bring up 
   # if you don't want to bring everything up
   # e.g. task up -- postgres <-- only brings up the postgres container
-  up:
+  up: ## Spin up the docker containers
     cmds:
       - docker compose -f docker-compose.yml up {{.CLI_ARGS}} -d
 
@@ -18,29 +18,29 @@ tasks:
   # of individual services to bring down
   # if you don't want to bring everything down
   # e.g. task down -- postgres <-- only brings down the postgres container
-  down:
+  down: ## Bring down the docker containers
     cmds:
       - docker compose -f docker-compose.yml down {{.CLI_ARGS}}
       
   # ------- Lint -------
-  lint:
+  lint: ## Run golangci-lint
     cmds:
       - golangci-lint run ./...
 
-  format:
+  format: ## Format the code
     cmds:
       - go fmt ./...
   
-  vet:
+  vet: ## Vet the code
     cmds:
       - go vet ./...
 
-  tidy:
+  tidy: ## Run both format and vet
     cmds:
       - task: format
       - task: vet
 
   # ------- Test ------- 
-  test:
+  test: ## Run all the unit/integration tests
     cmds:
       - go test ./...
