@@ -5,7 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,7 +16,7 @@ import (
 var client *http.Client
 
 const (
-	webhookUrl = "http://localhost:8080/webhook/plaid"
+	webhookUrl = "http://localhost:8081/webhook/plaid"
 )
 
 func makeRequest(
@@ -38,6 +40,15 @@ func makeRequest(
 	require.NoError(t, err)
 
 	return resp
+}
+
+func TestMain(m *testing.M) {
+	client = &http.Client{
+		Timeout: 5 * time.Second,
+	}
+	exitVal := m.Run()
+	client.CloseIdleConnections()
+	os.Exit(exitVal)
 }
 
 func TestWebhookPlaid(t *testing.T) {
