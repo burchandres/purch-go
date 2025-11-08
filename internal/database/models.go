@@ -67,8 +67,9 @@ type Account struct {
 type Transaction struct {
 	bun.BaseModel `bun:"table:transactions,alias:t" json:"-"`
 
-	ID             string     `bun:"id,pk" json:"id"`
-	AccountID      string     `bun:"account_id,notnull" json:"account_id"`
+	ID        string `bun:"id,pk" json:"id"`
+	AccountID string `bun:"account_id,notnull" json:"account_id"`
+	// TODO: make this a FK mapping to the category's uuid that this transaction falls under
 	CategoryLabel  *string    `bun:"category_label" json:"category_label"`
 	AuthorizedDate time.Time  `bun:"authorized_date,notnull,default:current_date" json:"authorized_date"`
 	SettledDate    *time.Time `bun:"settled_date" json:"settled_date"`
@@ -78,6 +79,7 @@ type Transaction struct {
 	Pending        bool       `bun:"pending,notnull,default:false" json:"pending"`
 
 	Account *Account `bun:"rel:belongs-to,join:account_id=id" json:"-"`
+	// TODO: add a category for rel:belongs-to
 }
 
 // -------- Update Schemas --------

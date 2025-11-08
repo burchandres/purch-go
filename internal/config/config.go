@@ -1,4 +1,4 @@
-package utils
+package config
 
 import (
 	"log/slog"
@@ -12,25 +12,28 @@ import (
 )
 
 var (
-	cfg  *Config
-	once sync.Once
-)
-
-const (
-	DEBUG = iota
-	INFO
-	WARN
-	ERROR
+	cfg        *Config
+	once       sync.Once
+	slogLevels = map[string]slog.Level{
+		"DEBUG": slog.LevelDebug,
+		"INFO":  slog.LevelInfo,
+		"WARN":  slog.LevelWarn,
+		"ERROR": slog.LevelError,
+	}
 )
 
 type Config struct {
 	// General settings
-	LogLevel string
+	LogLevel    string
+	ApiPort     int
+	WebhookPort int
+	GinMode     string
 	// Database settings
 	PostgresUrl string
 	// Encryption settings
 	SecretKey           string
 	EncryptionAlgorithm string
+	BcryptCost          int
 	// Plaid settings
 	PlaidClientID     string
 	PlaidSecret       string
@@ -39,25 +42,14 @@ type Config struct {
 	PlaidCountryCodes string
 	PlaidLanguage     string
 	PlaidRedirectUri  string
+	WebhookUrl        string
 }
 
 func (c *Config) GetPlaidCountryCodes() []plaid.CountryCode {
-	// countryCodes := strings.Split(c.PlaidCountryCodes, ",")
-	// var codes []plaid.CountryCode
-	// for _, code := range countryCodes {
-	// 	codes = append(codes, plaid.CountryCode(code))
-	// }
-	// return codes
 	return []plaid.CountryCode{plaid.COUNTRYCODE_US}
 }
 
 func (c *Config) GetPlaidProducts() []plaid.Products {
-	// plaidProducts := strings.Split(c.PlaidProducts, ",")
-	// var products []plaid.Products
-	// for _, product := range plaidProducts {
-	// 	products = append(products, plaid.Products(product))
-	// }
-	// return products
 	return []plaid.Products{plaid.PRODUCTS_AUTH, plaid.PRODUCTS_TRANSACTIONS}
 }
 
@@ -72,23 +64,40 @@ func loadConfig() *Config {
 	// should be developing against docker deployment
 	// but also pull from .env file if it exists
 	// don't panic if nothing exists stuff will just break
-	_ = godotenv.Load("/run/secrets/env")
-	_ = godotenv.Load(".env")
+	err := godotenv.Load(
+		"/run/secrets/env",
+		".env",
+		"../.env",
+		"../../.env",
+	)
+	if err != nil {
+		slog.Error("error loading config files", "error", err.Error())
+	}
 
 	config := &Config{
+		ApiPort:             getEnvVar("API_PORT", 8080),
+		WebhookPort:         getEnvVar("WEBHOOK_PORT", 8081),
 		LogLevel:            getEnvVar("LOG_LEVEL", "DEBUG"),
+		GinMode:             getEnvVar("GIN_MODE", "debug"),
 		PostgresUrl:         getEnvVar("POSTGRES_URL", "postgres://postgres:password@postgres:5432/purch?sslmode=disable"),
 		SecretKey:           getEnvVar("SECRET_KEY", ""),
 		EncryptionAlgorithm: getEnvVar("ENCRYPTION_ALGORITHM", "HS256"),
-		PlaidClientID:       getEnvVar("PLAID_CLIENT_ID", "client_id"),
-		PlaidSecret:         getEnvVar("PLAID_SECRET", "secret"),
-		PlaidEnv:            getEnvVar("PLAID_ENV", "sandbox"),
+		BcryptCost:          getEnvVar("BCRYPT_COST", 15),
+		PlaidClientID:       getEnvVar("PLAID_CLIENT_ID", ""),
+		PlaidSecret:         getEnvVar("PLAID_SECRET", ""),
+		PlaidEnv:            getEnvVar("PLAID_ENV", "saandbox"),
 		PlaidProducts:       getEnvVar("PLAID_PRODUCTS", "auth,transactions"),
 		PlaidCountryCodes:   getEnvVar("PLAID_COUNTRY_CODES", "US"),
 		PlaidLanguage:       getEnvVar("PLAID_LANGUAGE", "en"),
 		PlaidRedirectUri:    getEnvVar("PLAID_REDIRECT_URI", "http://localhost:5173/dashboard"),
+		WebhookUrl:          getEnvVar("WEBHOOK_URL", ""),
 	}
 
+	configureLogging(config.LogLevel)
+	slog.Info("log level set", "log-level", config.LogLevel)
+	slog.Info("gin mode set", "gin-mode", config.GinMode)
+	slog.Info("webhook url set", "webhook-url", config.WebhookUrl)
+	slog.Debug("loaded config", "config", *config)
 	return config
 }
 
@@ -118,4 +127,15 @@ func getEnvVar[T string | int | bool | float64](key string, defaultValue T) T {
 	}
 
 	return result.(T)
+}
+
+func configureLogging(logLevel string) {
+	logger := slog.New(slog.NewTextHandler(
+		os.Stdout,
+		&slog.HandlerOptions{
+			Level: slogLevels[logLevel],
+		},
+	),
+	)
+	slog.SetDefault(logger)
 }

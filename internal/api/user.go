@@ -8,6 +8,7 @@ import (
 	"github.com/plaid/plaid-go/v40/plaid"
 	"golang.org/x/crypto/bcrypt"
 
+	"purch/internal/config"
 	"purch/internal/database"
 	"purch/internal/tasks"
 	"purch/internal/utils"
@@ -30,6 +31,7 @@ func SetupUserEndpoints(r *gin.Engine) {
 }
 
 func registerUser(c *gin.Context) {
+	config := config.GetConfig()
 	// Implement user registration logic here
 	var newUser database.User
 
@@ -44,7 +46,7 @@ func registerUser(c *gin.Context) {
 		return
 	}
 	// hash the password before pushing to postgres
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), config.BcryptCost)
 	if err != nil {
 		slog.Error("failed to hash password.", "error", err.Error(), "endpoint", "/api/user/register")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
@@ -170,7 +172,7 @@ func getLinkToken(c *gin.Context) {
 	user, _ := c.Get("user")
 	userID := user.(database.User).ID.String()
 	plaidClient := utils.GetPlaidClient()
-	config := utils.GetConfig()
+	config := config.GetConfig()
 
 	requestUser := plaid.NewLinkTokenCreateRequestUser(userID)
 
@@ -179,10 +181,32 @@ func getLinkToken(c *gin.Context) {
 		"en",
 		config.GetPlaidCountryCodes(),
 	)
+	// Tell plaid we want 6 months of transactions for trends
+	var daysRequested int32 = 180
+	transactions := plaid.LinkTokenTransactions{
+		DaysRequested: &daysRequested,
+	}
+	// Tell plaid we only want checkings, savings or credit cards for now
+	depository := plaid.DepositoryFilter{
+		AccountSubtypes: []plaid.DepositoryAccountSubtype{
+			plaid.DEPOSITORYACCOUNTSUBTYPE_CHECKING,
+			plaid.DEPOSITORYACCOUNTSUBTYPE_SAVINGS,
+		},
+	}
+	credit := plaid.CreditFilter{
+		AccountSubtypes: []plaid.CreditAccountSubtype{plaid.CREDITACCOUNTSUBTYPE_CREDIT_CARD},
+	}
+	accountFilters := plaid.LinkTokenAccountFilters{
+		Depository: &depository,
+		Credit:     &credit,
+	}
 
 	request.SetUser(*requestUser)
 	request.SetProducts(config.GetPlaidProducts())
 	request.SetRedirectUri(config.PlaidRedirectUri)
+	request.SetTransactions(transactions)
+	request.SetAccountFilters(accountFilters)
+	// request.SetWebhook()
 
 	resp, _, err := plaidClient.PlaidApi.LinkTokenCreate(c.Request.Context()).LinkTokenCreateRequest(*request).Execute()
 
@@ -208,7 +232,7 @@ func exchangePublicToken(c *gin.Context) {
 	publicToken := c.Query("public_token")
 	if publicToken == "" {
 		slog.Error("public token not found in query params.", "userID", userID)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "public token not provided in query params as public_token"})
+		c.JSON(http.StatusBadRequest, "public token not provided in query params as public_token")
 		return
 	}
 

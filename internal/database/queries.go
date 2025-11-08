@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"purch/internal/config"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -34,6 +35,7 @@ func StoreUser(ctx context.Context, user User) error {
 }
 
 func UpdateUser(ctx context.Context, id uuid.UUID, updateParams UpdateUserParams) error {
+	config := config.GetConfig()
 	stmt := db.NewUpdate().Model((*User)(nil))
 	// build up query
 	if updateParams.FirstName != nil {
@@ -46,11 +48,12 @@ func UpdateUser(ctx context.Context, id uuid.UUID, updateParams UpdateUserParams
 		stmt = stmt.Set("username = ?", *updateParams.Username)
 	}
 	if updateParams.Password != nil {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(*updateParams.Password), bcrypt.DefaultCost)
+		newPassword := *(updateParams.Password)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), config.BcryptCost)
 		if err != nil {
 			return err
 		}
-		stmt = stmt.Set("password = ?", hashedPassword)
+		stmt = stmt.Set("password = ?", string(hashedPassword))
 	}
 	if updateParams.Income != nil {
 		stmt = stmt.Set("income = ?", *updateParams.Income)
@@ -123,6 +126,14 @@ func GetItem(ctx context.Context, id string) (Item, error) {
 	return item, err
 }
 
+func UpdateItemCursor(ctx context.Context, cursor, itemID string) error {
+	return db.NewUpdate().
+		Model((*Item)(nil)).
+		Set("transaction_cursor = ?", cursor).
+		Where("id = ?", itemID).
+		Scan(ctx)
+}
+
 func StoreItem(ctx context.Context, item Item) error {
 	return db.NewInsert().Model(&item).Scan(ctx)
 }
@@ -144,8 +155,8 @@ func StoreAccount(ctx context.Context, account Account) error {
 }
 
 // Batch insert a slice of accounts
-func StoreAccounts(ctx context.Context, accounts []*Account) error {
-	return db.NewInsert().Model(accounts).Scan(ctx)
+func StoreAccounts(ctx context.Context, accounts []Account) error {
+	return db.NewInsert().Model(&accounts).Scan(ctx)
 }
 
 // -------- Transaction Queries --------
@@ -157,4 +168,27 @@ func GetTransaction(ctx context.Context, id string) (Transaction, error) {
 		Where("id = ?", id).
 		Scan(ctx)
 	return transaction, err
+}
+
+func StoreTransactions(ctx context.Context, transactions []Transaction) error {
+	return db.NewInsert().Model(&transactions).Scan(ctx)
+}
+
+// Bulk update transactions. Updates their amount, settled_date and pending status.
+// Requires the inputted list to have those fields populated so data doesn't become corrupted along with transaction id.
+func UpdateTransactions(ctx context.Context, transactions []Transaction) error {
+	values := db.NewValues(&transactions)
+	return db.NewUpdate().
+		With("_data", values).
+		Model((*Transaction)(nil)).
+		TableExpr("_data").
+		Set("amount = _data.amount").
+		Set("settled_date = _data.settled_date").
+		Set("pending = _data.pending").
+		Where("id = _data.id").
+		Scan(ctx)
+}
+
+func DeleteTransactions(ctx context.Context, ids []string) error {
+	return db.NewDelete().Model((*Transaction)(nil)).Where("id IN ?", ids).Scan(ctx)
 }

@@ -2,33 +2,25 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"purch/internal/api"
+	"purch/internal/config"
 	"purch/internal/database"
-	"purch/internal/utils"
 )
-
-var slogLevels = map[string]slog.Level{
-	"DEBUG": slog.LevelDebug,
-	"INFO":  slog.LevelInfo,
-	"WARN":  slog.LevelWarn,
-	"ERROR": slog.LevelError,
-}
 
 func main() {
 	// get service configurations
-	config := utils.GetConfig()
-	// configure logging with config.LogLevel
-	configureLogging(config.LogLevel)
-	slog.Debug("loaded config.", "config", *config)
+	config := config.GetConfig()
 
 	// setup database connection pool
 	if err := database.Init(config.PostgresUrl); err != nil {
@@ -37,14 +29,17 @@ func main() {
 	defer database.Close()
 	slog.Info("initialized database pool.")
 
+	var wg sync.WaitGroup
+
 	// get API server
-	server := getServer()
+	apiServer := getApiServer(config)
 	// run server
-	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	wg.Go(func() {
+		if err := apiServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			panic(err)
 		}
-	}()
+	})
+	slog.Info("api server running", "port", config.WebhookPort)
 
 	// watch for shutdown signals
 	signalChan := make(chan os.Signal, 1)
@@ -55,35 +50,25 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := server.Shutdown(ctx); err != nil {
-		slog.Info("error shutting down server.", "error", err.Error())
+	if err := apiServer.Shutdown(ctx); err != nil {
+		slog.Error("error shutting down api server.", "error", err.Error())
 	}
+	wg.Wait()
 	slog.Info("shutdown complete.")
 }
 
-func configureLogging(logLevel string) {
-	logger := slog.New(slog.NewTextHandler(
-		os.Stdout,
-		&slog.HandlerOptions{
-			Level: slogLevels[logLevel],
-		},
-	),
-	)
-	slog.SetDefault(logger)
-}
-
-func getServer() *http.Server {
+func getApiServer(config *config.Config) *http.Server {
 	router := gin.Default()
 
 	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "pong"})
+		c.JSON(http.StatusOK, "pong")
 	})
 
 	api.SetupUserEndpoints(router)
 	api.SetupBudgetEndpoints(router)
 
 	return &http.Server{
-		Addr:    ":8080",
+		Addr:    fmt.Sprintf(":%d", config.ApiPort),
 		Handler: router,
 	}
 }
