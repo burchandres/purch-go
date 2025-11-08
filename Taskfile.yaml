@@ -44,3 +44,8 @@ tasks:
   test:
     cmds:
       - go test ./...
+      
+  # ------- Postgres -------
+  psql:
+    cmds:
+      - psql -d purch -U postgres -h localhost

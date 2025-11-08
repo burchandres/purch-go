@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	// "database/sql"
 	"purch/internal/config"
 
 	"github.com/google/uuid"
@@ -61,7 +62,8 @@ func UpdateUser(ctx context.Context, id uuid.UUID, updateParams UpdateUserParams
 	if updateParams.IncomeRate != nil {
 		stmt = stmt.Set("income_rate = ?", *updateParams.IncomeRate)
 	}
-	return stmt.Where("id = ?", id).Scan(ctx)
+	_, err := stmt.Where("id = ?", id).Exec(ctx)
+	return err
 }
 
 func DeleteUser(ctx context.Context, user User) error {
@@ -127,11 +129,14 @@ func GetItem(ctx context.Context, id string) (Item, error) {
 }
 
 func UpdateItemCursor(ctx context.Context, cursor, itemID string) error {
-	return db.NewUpdate().
+	// var results sql.Result
+	_, err := db.NewUpdate().
 		Model((*Item)(nil)).
 		Set("transaction_cursor = ?", cursor).
 		Where("id = ?", itemID).
-		Scan(ctx)
+		Returning("NULL").
+		Exec(ctx)
+	return err
 }
 
 func StoreItem(ctx context.Context, item Item) error {

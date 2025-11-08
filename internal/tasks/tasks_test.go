@@ -2,10 +2,9 @@ package tasks
 
 import (
 	"context"
-	"errors"
+	"database/sql"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -56,13 +55,27 @@ func storeTestUser(t *testing.T) database.User {
 }
 
 func createSandboxItem(t *testing.T, ctx context.Context, client *plaid.APIClient, institutionID string, products []plaid.Products) plaid.ItemPublicTokenExchangeResponse {
+	// good transactions test user credentials -- taken from: https://plaid.com/docs/sandbox/test-credentials/
+	username := "user_transactions_dynamic"
+	usernameOverride := plaid.NullableString{}
+	usernameOverride.Set(&username)
+	password := "any-nonempty-password"
+	passwordOverride := plaid.NullableString{}
+	passwordOverride.Set(&password)
+	overrideUserCreds := plaid.SandboxPublicTokenCreateRequestOptions{
+		OverrideUsername: usernameOverride,
+		OverridePassword: passwordOverride,
+	}
+	createRequest := plaid.NewSandboxPublicTokenCreateRequest(
+		institutionID,
+		products,
+	)
+	createRequest.SetOptions(overrideUserCreds)
 	// generate a sandbox public_token
-	sandboxPublicTokenResp, httpResp, err := client.PlaidApi.SandboxPublicTokenCreate(ctx).SandboxPublicTokenCreateRequest(
-		*plaid.NewSandboxPublicTokenCreateRequest(
-			institutionID,
-			products,
-		),
-	).Execute()
+	sandboxPublicTokenResp, httpResp, err := client.PlaidApi.
+		SandboxPublicTokenCreate(ctx).
+		SandboxPublicTokenCreateRequest(*createRequest).
+		Execute()
 
 	if err != nil {
 		t.Logf("error in getting public token response: %v", err)
@@ -86,28 +99,6 @@ func createSandboxItem(t *testing.T, ctx context.Context, client *plaid.APIClien
 	assert.NotEqual(t, "", exchangePublicTokenResp.ItemId)
 
 	return exchangePublicTokenResp
-}
-
-func pollForTransactionsSync(t *testing.T, ctx context.Context, plaidClient *plaid.APIClient, request *plaid.TransactionsSyncRequest) (*plaid.TransactionsSyncResponse, error) {
-
-	for i := 0; i < 10; i++ {
-		response, _, err := plaidClient.PlaidApi.TransactionsSync(ctx).TransactionsSyncRequest(*request).Execute()
-
-		if err == nil {
-			return &response, nil
-		}
-
-		plaidErr, conversionErr := plaid.ToPlaidError(err)
-		assert.NoError(t, conversionErr)
-		if plaidErr.ErrorCode == "PRODUCT_NOT_READY" {
-			time.Sleep(2 * time.Second)
-			continue
-		}
-
-		return &response, err
-	}
-
-	return nil, errors.New("failed to get transactions")
 }
 
 func TestMain(m *testing.M) {
@@ -212,7 +203,7 @@ func TestSyncTransactions(t *testing.T) {
 	}
 	require.Nil(t, err)
 	transactions, err := database.GetUserTransactions(ctx, testUser.ID)
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		t.Logf("error pulling transactions persisted in SyncTransactions task in TestSyncTransactions: %v", err)
 	}
 	assert.NotEmpty(t, transactions)
