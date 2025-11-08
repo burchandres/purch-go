@@ -211,7 +211,7 @@ func TestSyncTransactions(t *testing.T) {
 		transactions, count, err = database.GetUserTransactions(ctx, testUser.ID)
 		if count == 0 {
 			t.Logf("no transactions, sleeping for 3s then trying again...")
-			time.Sleep(3*time.Second)
+			time.Sleep(3 * time.Second)
 		} else {
 			retry = false
 		}
