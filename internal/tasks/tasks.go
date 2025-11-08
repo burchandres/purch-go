@@ -29,7 +29,7 @@ var (
 	ErrStoringTransactions    = errors.New("error storing transactions")
 )
 
-/* 
+/*
 Used to sync a user's bank, bank accounts and transactions
 upon initial registration with Purch.
 
@@ -148,15 +148,15 @@ type TransactionsWorker struct {
 
 func NewTransactionsWorker(ctx context.Context, itemID, accessToken string) *TransactionsWorker {
 	return &TransactionsWorker{
-		itemID:       itemID,
-		accessToken:  accessToken,
-		ctx:          ctx,
+		itemID:      itemID,
+		accessToken: accessToken,
+		ctx:         ctx,
 	}
 }
 
 func (w *TransactionsWorker) Work(cursor string) error {
 	var err error
-	
+
 	plaidClient := utils.GetPlaidClient()
 	transactionsSyncRequest := plaid.NewTransactionsSyncRequest(w.accessToken)
 	hasMore := true

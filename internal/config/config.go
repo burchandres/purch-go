@@ -25,7 +25,9 @@ const (
 
 type Config struct {
 	// General settings
-	LogLevel string
+	LogLevel    string
+	ApiPort     int
+	WebhookPort int
 	// Database settings
 	PostgresUrl string
 	// Encryption settings
@@ -39,7 +41,7 @@ type Config struct {
 	PlaidCountryCodes string
 	PlaidLanguage     string
 	PlaidRedirectUri  string
-	// WebhookUrl        string
+	WebhookUrl        string
 }
 
 func (c *Config) GetPlaidCountryCodes() []plaid.CountryCode {
@@ -62,7 +64,7 @@ func loadConfig() *Config {
 	// but also pull from .env file if it exists
 	// don't panic if nothing exists stuff will just break
 	err := godotenv.Load(
-		"/run/secrets/env", 
+		"/run/secrets/env",
 		".env",
 		"../.env",
 		"../../.env",
@@ -72,6 +74,8 @@ func loadConfig() *Config {
 	}
 
 	config := &Config{
+		ApiPort:             getEnvVar("API_PORT", 8080),
+		WebhookPort:         getEnvVar("WEBHOOK_PORT", 8081),
 		LogLevel:            getEnvVar("LOG_LEVEL", "DEBUG"),
 		PostgresUrl:         getEnvVar("POSTGRES_URL", "postgres://postgres:password@postgres:5432/purch?sslmode=disable"),
 		SecretKey:           getEnvVar("SECRET_KEY", ""),
@@ -83,7 +87,7 @@ func loadConfig() *Config {
 		PlaidCountryCodes:   getEnvVar("PLAID_COUNTRY_CODES", "US"),
 		PlaidLanguage:       getEnvVar("PLAID_LANGUAGE", "en"),
 		PlaidRedirectUri:    getEnvVar("PLAID_REDIRECT_URI", "http://localhost:5173/dashboard"),
-		// WebhookUrl:          getEnvVar("WEBHOOK_URL", "http://localhost:8080/budget/")
+		WebhookUrl:          getEnvVar("WEBHOOK_URL", ""),
 	}
 
 	return config

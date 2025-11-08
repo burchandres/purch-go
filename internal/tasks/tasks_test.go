@@ -8,15 +8,15 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 	"github.com/plaid/plaid-go/v40/plaid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 
+	"purch/internal/config"
 	"purch/internal/database"
 	"purch/internal/utils"
-	"purch/internal/config"
 )
 
 const (
@@ -29,11 +29,11 @@ func getTestUser() database.User {
 	incomeRate := "annual"
 	password, _ := bcrypt.GenerateFromPassword([]byte("testpass"), bcrypt.DefaultCost)
 	return database.User{
-		FirstName: "foo",
-		LastName: "bar",
-		Username: "testuser_" + uuid.NewString()[:8],
-		Password: string(password),
-		Income: &income,
+		FirstName:  "foo",
+		LastName:   "bar",
+		Username:   "testuser_" + uuid.NewString()[:8],
+		Password:   string(password),
+		Income:     &income,
 		IncomeRate: &incomeRate,
 	}
 }
@@ -85,10 +85,8 @@ func createSandboxItem(t *testing.T, ctx context.Context, client *plaid.APIClien
 	assert.NotEqual(t, "", exchangePublicTokenResp.AccessToken)
 	assert.NotEqual(t, "", exchangePublicTokenResp.ItemId)
 
-
 	return exchangePublicTokenResp
 }
-
 
 func pollForTransactionsSync(t *testing.T, ctx context.Context, plaidClient *plaid.APIClient, request *plaid.TransactionsSyncRequest) (*plaid.TransactionsSyncResponse, error) {
 

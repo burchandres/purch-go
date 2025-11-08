@@ -2,18 +2,20 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"purch/internal/api"
-	"purch/internal/database"
 	"purch/internal/config"
+	"purch/internal/database"
 )
 
 var slogLevels = map[string]slog.Level{
@@ -37,14 +39,26 @@ func main() {
 	defer database.Close()
 	slog.Info("initialized database pool.")
 
-	// get API server
-	server := getServer()
-	// run server
-	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	var wg sync.WaitGroup
+
+	// get webhook server
+	webhookServer := api.GetWebhookServer(config)
+	wg.Go(func() {
+		if err := webhookServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			panic(err)
 		}
-	}()
+	})
+	slog.Info("webhook server running", "port", config.WebhookPort)
+
+	// get API server
+	apiServer := getApiServer(config)
+	// run server
+	wg.Go(func() {
+		if err := apiServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			panic(err)
+		}
+	})
+	slog.Info("api server running", "port", config.WebhookPort)
 
 	// watch for shutdown signals
 	signalChan := make(chan os.Signal, 1)
@@ -55,9 +69,13 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := server.Shutdown(ctx); err != nil {
-		slog.Info("error shutting down server.", "error", err.Error())
+	if err := apiServer.Shutdown(ctx); err != nil {
+		slog.Error("error shutting down api server.", "error", err.Error())
 	}
+	if err := webhookServer.Shutdown(ctx); err != nil {
+		slog.Error("error shutting down webhook server", "error", err.Error())
+	}
+	wg.Wait()
 	slog.Info("shutdown complete.")
 }
 
@@ -72,7 +90,7 @@ func configureLogging(logLevel string) {
 	slog.SetDefault(logger)
 }
 
-func getServer() *http.Server {
+func getApiServer(config *config.Config) *http.Server {
 	router := gin.Default()
 
 	router.GET("/ping", func(c *gin.Context) {
@@ -83,7 +101,7 @@ func getServer() *http.Server {
 	api.SetupBudgetEndpoints(router)
 
 	return &http.Server{
-		Addr:    ":8080",
+		Addr:    fmt.Sprintf(":%d", config.ApiPort),
 		Handler: router,
 	}
 }

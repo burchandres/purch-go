@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/plaid/plaid-go/v40/plaid"
-	
+
 	"purch/internal/config"
 )
 

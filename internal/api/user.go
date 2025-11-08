@@ -8,10 +8,10 @@ import (
 	"github.com/plaid/plaid-go/v40/plaid"
 	"golang.org/x/crypto/bcrypt"
 
+	"purch/internal/config"
 	"purch/internal/database"
 	"purch/internal/tasks"
 	"purch/internal/utils"
-	"purch/internal/config"
 )
 
 func SetupUserEndpoints(r *gin.Engine) {
@@ -197,7 +197,7 @@ func getLinkToken(c *gin.Context) {
 	}
 	accountFilters := plaid.LinkTokenAccountFilters{
 		Depository: &depository,
-		Credit: &credit,
+		Credit:     &credit,
 	}
 
 	request.SetUser(*requestUser)
