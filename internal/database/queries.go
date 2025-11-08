@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	// "database/sql"
 	"purch/internal/config"
 
 	"github.com/google/uuid"
@@ -61,7 +62,8 @@ func UpdateUser(ctx context.Context, id uuid.UUID, updateParams UpdateUserParams
 	if updateParams.IncomeRate != nil {
 		stmt = stmt.Set("income_rate = ?", *updateParams.IncomeRate)
 	}
-	return stmt.Where("id = ?", id).Scan(ctx)
+	_, err := stmt.Where("id = ?", id).Exec(ctx)
+	return err
 }
 
 func DeleteUser(ctx context.Context, user User) error {
@@ -101,17 +103,17 @@ func GetUserAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error) {
 	return accounts, err
 }
 
-func GetUserTransactions(ctx context.Context, userID uuid.UUID) ([]Transaction, error) {
+func GetUserTransactions(ctx context.Context, userID uuid.UUID) ([]Transaction, int, error) {
 	var transactions []Transaction
-	err := db.NewSelect().
+	count, err := db.NewSelect().
 		Model(&transactions).
 		ColumnExpr("t.*").
 		Join("JOIN accounts AS a").JoinOn("a.id = t.account_id").
 		Join("JOIN items AS i").JoinOn("i.id = a.item_id").
 		Where("i.user_id = ?", userID).
 		// Order("t.authorized_date").
-		Scan(ctx)
-	return transactions, err
+		ScanAndCount(ctx)
+	return transactions, count, err
 }
 
 // -------- Item Queries --------
@@ -127,11 +129,14 @@ func GetItem(ctx context.Context, id string) (Item, error) {
 }
 
 func UpdateItemCursor(ctx context.Context, cursor, itemID string) error {
-	return db.NewUpdate().
+	// var results sql.Result
+	_, err := db.NewUpdate().
 		Model((*Item)(nil)).
 		Set("transaction_cursor = ?", cursor).
 		Where("id = ?", itemID).
-		Scan(ctx)
+		Returning("NULL").
+		Exec(ctx)
+	return err
 }
 
 func StoreItem(ctx context.Context, item Item) error {
