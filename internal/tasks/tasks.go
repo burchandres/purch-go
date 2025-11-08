@@ -137,13 +137,12 @@ func SyncTransactions(
 	cursor string,
 ) error {
 	worker := NewTransactionsWorker(ctx, itemID, accessToken, cursor)
-	return worker.Work()
+	return worker.Work(cursor)
 }
 
 type TransactionsWorker struct {
 	itemID      string
 	accessToken string
-	cursor      string
 	ctx         context.Context
 }
 
@@ -151,50 +150,60 @@ func NewTransactionsWorker(ctx context.Context, itemID, accessToken, cursor stri
 	return &TransactionsWorker{
 		itemID:       itemID,
 		accessToken:  accessToken,
-		cursor:       cursor,
 		ctx:          ctx,
 	}
 }
 
-func (w *TransactionsWorker) Work() error {
+func (w *TransactionsWorker) Work(cursor string) error {
+	var err error
+	
 	plaidClient := utils.GetPlaidClient()
 	transactionsSyncRequest := plaid.NewTransactionsSyncRequest(w.accessToken)
 	hasMore := true
-	nextCursor := w.cursor
+	addedTransactions := []plaid.Transaction{}
+	modifiedTransactions := []plaid.Transaction{}
+	removedTransactions := []plaid.RemovedTransaction{}
 	for hasMore {
 		// set cursor value
-		transactionsSyncRequest.SetCursor(nextCursor)
+		transactionsSyncRequest.SetCursor(cursor)
 		// execute TransactionsSyncRequest
-		transactionsSyncResp, _, err := plaidClient.PlaidApi.TransactionsSync(w.ctx).TransactionsSyncRequest(*transactionsSyncRequest).Execute()
+		var transactionsSyncResp plaid.TransactionsSyncResponse
+		transactionsSyncResp, _, err = plaidClient.PlaidApi.TransactionsSync(w.ctx).TransactionsSyncRequest(*transactionsSyncRequest).Execute()
 		if err != nil {
-			slog.Error("error pulling transactions", "error", err.Error(), "itemID", w.itemID, "cursor", nextCursor)
+			slog.Error("error pulling transactions", "error", err.Error(), "item-id", w.itemID, "cursor", cursor)
 			break
 		}
-		// send transactions for processing
-		g, ctx := errgroup.WithContext(w.ctx)
-		// process newly added transactions
-		g.Go(func() error {
-			return w.syncAddedTransactionsFromPlaid(ctx, transactionsSyncResp.GetAdded())
-		})
-		// process modified transactions
-		g.Go(func() error {
-			return w.syncModifiedTransactionsFromPlaid(ctx, transactionsSyncResp.GetModified())
-		})
-		// process removed transactions
-		g.Go(func() error {
-			return w.syncRemovedTransactionsFromPlaid(ctx, transactionsSyncResp.GetRemoved())
-		})
-		// wait for the three goroutines to finish incase we need to break and restart at another time from the recorded cursor
-		if err := g.Wait(); err != nil {
-			slog.Error("error syncing transactions from plaid", "error", err.Error(), "item-id", w.itemID)
-			break
-		}
+		addedTransactions = append(addedTransactions, transactionsSyncResp.GetAdded()...)
+		modifiedTransactions = append(modifiedTransactions, transactionsSyncResp.GetModified()...)
+		removedTransactions = append(removedTransactions, transactionsSyncResp.GetRemoved()...)
 		// update hasMore and transaction cursor
 		hasMore = transactionsSyncResp.GetHasMore()
-		nextCursor = w.cursor
+		cursor = transactionsSyncResp.GetNextCursor()
+	}
+	if err != nil {
+		return err
+	}
+	// send transactions for processing
+	g, ctx := errgroup.WithContext(w.ctx)
+	// process newly added transactions
+	g.Go(func() error {
+		return w.syncAddedTransactionsFromPlaid(ctx, addedTransactions)
+	})
+	// process modified transactions
+	g.Go(func() error {
+		return w.syncModifiedTransactionsFromPlaid(ctx, modifiedTransactions)
+	})
+	// process removed transactions
+	g.Go(func() error {
+		return w.syncRemovedTransactionsFromPlaid(ctx, removedTransactions)
+	})
+	// wait for the three goroutines to finish incase we need to break and restart at another time from the recorded cursor
+	if err := g.Wait(); err != nil {
+		slog.Error("error syncing transactions from plaid", "error", err.Error(), "item-id", w.itemID)
+		return err
 	}
 	// update cursor for item after syncing all transactions
-	return database.UpdateItemCursor(w.ctx, w.cursor, w.itemID)
+	return database.UpdateItemCursor(w.ctx, cursor, w.itemID)
 }
 
 func (w *TransactionsWorker) syncAddedTransactionsFromPlaid(ctx context.Context, addedTransactions []plaid.Transaction) error {
