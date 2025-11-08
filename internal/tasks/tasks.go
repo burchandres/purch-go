@@ -136,7 +136,7 @@ func SyncTransactions(
 	accessToken string,
 	cursor string,
 ) error {
-	worker := NewTransactionsWorker(ctx, itemID, accessToken, cursor)
+	worker := NewTransactionsWorker(ctx, itemID, accessToken)
 	return worker.Work(cursor)
 }
 
@@ -146,7 +146,7 @@ type TransactionsWorker struct {
 	ctx         context.Context
 }
 
-func NewTransactionsWorker(ctx context.Context, itemID, accessToken, cursor string) *TransactionsWorker {
+func NewTransactionsWorker(ctx context.Context, itemID, accessToken string) *TransactionsWorker {
 	return &TransactionsWorker{
 		itemID:       itemID,
 		accessToken:  accessToken,
