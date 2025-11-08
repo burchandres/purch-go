@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"purch/internal/config"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -34,6 +35,7 @@ func StoreUser(ctx context.Context, user User) error {
 }
 
 func UpdateUser(ctx context.Context, id uuid.UUID, updateParams UpdateUserParams) error {
+	config := config.GetConfig()
 	stmt := db.NewUpdate().Model((*User)(nil))
 	// build up query
 	if updateParams.FirstName != nil {
@@ -47,7 +49,7 @@ func UpdateUser(ctx context.Context, id uuid.UUID, updateParams UpdateUserParams
 	}
 	if updateParams.Password != nil {
 		newPassword := *(updateParams.Password)
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), config.BcryptCost)
 		if err != nil {
 			return err
 		}

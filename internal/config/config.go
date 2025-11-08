@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	cfg  *Config
-	once sync.Once
+	cfg        *Config
+	once       sync.Once
 	slogLevels = map[string]slog.Level{
 		"DEBUG": slog.LevelDebug,
 		"INFO":  slog.LevelInfo,
@@ -33,6 +33,7 @@ type Config struct {
 	// Encryption settings
 	SecretKey           string
 	EncryptionAlgorithm string
+	BcryptCost          int
 	// Plaid settings
 	PlaidClientID     string
 	PlaidSecret       string
@@ -81,6 +82,7 @@ func loadConfig() *Config {
 		PostgresUrl:         getEnvVar("POSTGRES_URL", "postgres://postgres:password@postgres:5432/purch?sslmode=disable"),
 		SecretKey:           getEnvVar("SECRET_KEY", ""),
 		EncryptionAlgorithm: getEnvVar("ENCRYPTION_ALGORITHM", "HS256"),
+		BcryptCost:          getEnvVar("BCRYPT_COST", 15),
 		PlaidClientID:       getEnvVar("PLAID_CLIENT_ID", ""),
 		PlaidSecret:         getEnvVar("PLAID_SECRET", ""),
 		PlaidEnv:            getEnvVar("PLAID_ENV", "saandbox"),

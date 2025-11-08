@@ -18,7 +18,6 @@ import (
 	"purch/internal/database"
 )
 
-
 func main() {
 	// get service configurations
 	config := config.GetConfig()

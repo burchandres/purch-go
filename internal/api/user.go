@@ -31,6 +31,7 @@ func SetupUserEndpoints(r *gin.Engine) {
 }
 
 func registerUser(c *gin.Context) {
+	config := config.GetConfig()
 	// Implement user registration logic here
 	var newUser database.User
 
@@ -45,7 +46,7 @@ func registerUser(c *gin.Context) {
 		return
 	}
 	// hash the password before pushing to postgres
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newUser.Password), config.BcryptCost)
 	if err != nil {
 		slog.Error("failed to hash password.", "error", err.Error(), "endpoint", "/api/user/register")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})

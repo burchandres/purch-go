@@ -14,13 +14,12 @@ import (
 	"purch/webhook"
 )
 
-
 func main() {
 	config := config.GetConfig()
 	server := webhook.GetWebhookServer(config)
-	
+
 	var wg sync.WaitGroup
-	
+
 	wg.Go(func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			panic(err)
@@ -31,7 +30,7 @@ func main() {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
-	
+
 	slog.Info("shutting down server...")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

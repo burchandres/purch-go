@@ -1,5 +1,5 @@
 /*
-Separate webhook binary to receive plaid webhook notifications 
+Separate webhook binary to receive plaid webhook notifications
 to only expose this host/port and not the rest of the application.
 */
 package webhook
@@ -7,13 +7,11 @@ package webhook
 import (
 	"fmt"
 	"net/http"
-	
+
 	"github.com/gin-gonic/gin"
 
 	"purch/internal/config"
 )
-
-
 
 func GetWebhookServer(config *config.Config) *http.Server {
 	router := gin.Default()
