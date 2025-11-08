@@ -18,19 +18,10 @@ import (
 	"purch/internal/database"
 )
 
-var slogLevels = map[string]slog.Level{
-	"DEBUG": slog.LevelDebug,
-	"INFO":  slog.LevelInfo,
-	"WARN":  slog.LevelWarn,
-	"ERROR": slog.LevelError,
-}
 
 func main() {
 	// get service configurations
 	config := config.GetConfig()
-	// configure logging with config.LogLevel
-	configureLogging(config.LogLevel)
-	slog.Debug("loaded config.", "config", *config)
 
 	// setup database connection pool
 	if err := database.Init(config.PostgresUrl); err != nil {
@@ -40,15 +31,6 @@ func main() {
 	slog.Info("initialized database pool.")
 
 	var wg sync.WaitGroup
-
-	// get webhook server
-	webhookServer := api.GetWebhookServer(config)
-	wg.Go(func() {
-		if err := webhookServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			panic(err)
-		}
-	})
-	slog.Info("webhook server running", "port", config.WebhookPort)
 
 	// get API server
 	apiServer := getApiServer(config)
@@ -72,22 +54,8 @@ func main() {
 	if err := apiServer.Shutdown(ctx); err != nil {
 		slog.Error("error shutting down api server.", "error", err.Error())
 	}
-	if err := webhookServer.Shutdown(ctx); err != nil {
-		slog.Error("error shutting down webhook server", "error", err.Error())
-	}
 	wg.Wait()
 	slog.Info("shutdown complete.")
-}
-
-func configureLogging(logLevel string) {
-	logger := slog.New(slog.NewTextHandler(
-		os.Stdout,
-		&slog.HandlerOptions{
-			Level: slogLevels[logLevel],
-		},
-	),
-	)
-	slog.SetDefault(logger)
 }
 
 func getApiServer(config *config.Config) *http.Server {

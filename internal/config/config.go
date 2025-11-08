@@ -14,13 +14,12 @@ import (
 var (
 	cfg  *Config
 	once sync.Once
-)
-
-const (
-	DEBUG = iota
-	INFO
-	WARN
-	ERROR
+	slogLevels = map[string]slog.Level{
+		"DEBUG": slog.LevelDebug,
+		"INFO":  slog.LevelInfo,
+		"WARN":  slog.LevelWarn,
+		"ERROR": slog.LevelError,
+	}
 )
 
 type Config struct {
@@ -90,6 +89,9 @@ func loadConfig() *Config {
 		WebhookUrl:          getEnvVar("WEBHOOK_URL", ""),
 	}
 
+	configureLogging(config.LogLevel)
+	slog.Info("log level set", "log-level", config.LogLevel)
+	slog.Debug("loaded config", "config", *config)
 	return config
 }
 
@@ -119,4 +121,15 @@ func getEnvVar[T string | int | bool | float64](key string, defaultValue T) T {
 	}
 
 	return result.(T)
+}
+
+func configureLogging(logLevel string) {
+	logger := slog.New(slog.NewTextHandler(
+		os.Stdout,
+		&slog.HandlerOptions{
+			Level: slogLevels[logLevel],
+		},
+	),
+	)
+	slog.SetDefault(logger)
 }
