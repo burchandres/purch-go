@@ -1,3 +1,5 @@
+
+
 services:
   postgres:
     image: postgres:18-alpine
@@ -27,17 +29,19 @@ services:
       - env
     ports:
       - "8080:8080"
+    environment:
+      - GIN_MODE=${GIN_MODE}
     command: "./purch"
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/ping || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+    # healthcheck:
+    #   test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/ping || exit 1"]
+    #   interval: 5s
+    #   timeout: 5s
+    #   retries: 3
+    #   start_period: 5s
     
   purch-webhook:
     build: 
@@ -48,16 +52,21 @@ services:
         - env
     ports:
       - "8081:8081"
+    environment:
+      - GIN_MODE=${GIN_MODE}
     command: "./purch-webhook"
     depends_on:
-      purch:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8081/ping || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
+      - "purch"
+    restart: unless-stopped
+    # depends_on:
+    #   purch:
+    #     condition: service_healthy
+    # healthcheck:
+    #   test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8081/ping || exit 1"]
+    #   interval: 5s
+    #   timeout: 5s
+    #   retries: 3
+    #   start_period: 5s
 
 volumes:
   postgres_data:

@@ -27,6 +27,7 @@ type Config struct {
 	LogLevel    string
 	ApiPort     int
 	WebhookPort int
+	GinMode     string
 	// Database settings
 	PostgresUrl string
 	// Encryption settings
@@ -76,6 +77,7 @@ func loadConfig() *Config {
 		ApiPort:             getEnvVar("API_PORT", 8080),
 		WebhookPort:         getEnvVar("WEBHOOK_PORT", 8081),
 		LogLevel:            getEnvVar("LOG_LEVEL", "DEBUG"),
+		GinMode:             getEnvVar("GIN_MODE", "debug"),
 		PostgresUrl:         getEnvVar("POSTGRES_URL", "postgres://postgres:password@postgres:5432/purch?sslmode=disable"),
 		SecretKey:           getEnvVar("SECRET_KEY", ""),
 		EncryptionAlgorithm: getEnvVar("ENCRYPTION_ALGORITHM", "HS256"),
@@ -91,6 +93,8 @@ func loadConfig() *Config {
 
 	configureLogging(config.LogLevel)
 	slog.Info("log level set", "log-level", config.LogLevel)
+	slog.Info("gin mode set", "gin-mode", config.GinMode)
+	slog.Info("webhook url set", "webhook-url", config.WebhookUrl)
 	slog.Debug("loaded config", "config", *config)
 	return config
 }
