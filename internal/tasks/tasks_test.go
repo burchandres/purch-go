@@ -2,9 +2,9 @@ package tasks
 
 import (
 	"context"
-	"database/sql"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -56,7 +56,7 @@ func storeTestUser(t *testing.T) database.User {
 
 func createSandboxItem(t *testing.T, ctx context.Context, client *plaid.APIClient, institutionID string, products []plaid.Products) plaid.ItemPublicTokenExchangeResponse {
 	// good transactions test user credentials -- taken from: https://plaid.com/docs/sandbox/test-credentials/
-	username := "user_ewa_user"
+	username := "user_transactions_dynamic"
 	usernameOverride := plaid.NullableString{}
 	usernameOverride.Set(&username)
 	password := "any-nonempty-password"
@@ -196,19 +196,33 @@ func TestSyncTransactions(t *testing.T) {
 		t.Logf("error from SyncAccounts task in TestSyncTransactions: %v", err)
 	}
 	require.Nil(t, err)
-	// now sync all transactions
-	err = SyncTransactions(ctx, itemID, accessToken, "")
-	if err != nil {
-		t.Logf("error from SyncTransactions task in TestSyncTransactions: %v", err)
+	// keep asking for transactions until we get some
+	var transactions []database.Transaction
+	retry := true
+	for retry {
+		// now sync all transactions
+		err = SyncTransactions(ctx, itemID, accessToken, "")
+		if err != nil {
+			t.Logf("error from SyncTransactions task in TestSyncTransactions: %v", err)
+		}
+		require.Nil(t, err)
+		// make sure we actually get transactions
+		var count int
+		transactions, count, err = database.GetUserTransactions(ctx, testUser.ID)
+		if count == 0 {
+			t.Logf("no transactions, sleeping for 3s then trying again...")
+			time.Sleep(3*time.Second)
+		} else {
+			retry = false
+		}
 	}
-	require.Nil(t, err)
-	transactions, err := database.GetUserTransactions(ctx, testUser.ID)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
 		t.Logf("error pulling transactions persisted in SyncTransactions task in TestSyncTransactions: %v", err)
 	}
+	assert.Nil(t, err)
 	assert.NotEmpty(t, transactions)
-	t.Cleanup(func() {
-		// delete user and everything follows due to cascading deletes
-		database.DeleteUser(ctx, testUser)
-	})
+	// t.Cleanup(func() {
+	// 	// delete user and everything follows due to cascading deletes
+	// 	database.DeleteUser(ctx, testUser)
+	// })
 }

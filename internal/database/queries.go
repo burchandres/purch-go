@@ -103,17 +103,17 @@ func GetUserAccounts(ctx context.Context, userID uuid.UUID) ([]Account, error) {
 	return accounts, err
 }
 
-func GetUserTransactions(ctx context.Context, userID uuid.UUID) ([]Transaction, error) {
+func GetUserTransactions(ctx context.Context, userID uuid.UUID) ([]Transaction, int, error) {
 	var transactions []Transaction
-	err := db.NewSelect().
+	count, err := db.NewSelect().
 		Model(&transactions).
 		ColumnExpr("t.*").
 		Join("JOIN accounts AS a").JoinOn("a.id = t.account_id").
 		Join("JOIN items AS i").JoinOn("i.id = a.item_id").
 		Where("i.user_id = ?", userID).
 		// Order("t.authorized_date").
-		Scan(ctx)
-	return transactions, err
+		ScanAndCount(ctx)
+	return transactions, count, err
 }
 
 // -------- Item Queries --------
