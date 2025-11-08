@@ -56,7 +56,7 @@ func storeTestUser(t *testing.T) database.User {
 
 func createSandboxItem(t *testing.T, ctx context.Context, client *plaid.APIClient, institutionID string, products []plaid.Products) plaid.ItemPublicTokenExchangeResponse {
 	// good transactions test user credentials -- taken from: https://plaid.com/docs/sandbox/test-credentials/
-	username := "user_transactions_dynamic"
+	username := "user_ewa_user"
 	usernameOverride := plaid.NullableString{}
 	usernameOverride.Set(&username)
 	password := "any-nonempty-password"

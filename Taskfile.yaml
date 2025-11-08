@@ -48,4 +48,4 @@ tasks:
   # ------- Postgres -------
   psql:
     cmds:
-      - psql -d purch -U postgres -h localhost
+      - psql postgres://postgres:password@localhost:5432/purch
