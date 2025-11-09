@@ -44,3 +44,8 @@ tasks:
   test: ## Run all the unit/integration tests
     cmds:
       - go test ./...
+      
+  # ------- Postgres -------
+  psql:
+    cmds:
+      - psql postgres://postgres:password@localhost:5432/purch

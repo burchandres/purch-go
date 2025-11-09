@@ -42,6 +42,7 @@ func getItems(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error pulling user items..."})
 		return
 	}
+	// decrypt
 	c.JSON(http.StatusOK, items)
 }
 
@@ -60,7 +61,7 @@ func getAccounts(c *gin.Context) {
 func getTransactions(c *gin.Context) {
 	user, _ := c.Get("user")
 	userID := user.(database.User).ID
-	transactions, err := database.GetUserTransactions(c.Request.Context(), userID)
+	transactions, _, err := database.GetUserTransactions(c.Request.Context(), userID)
 	if err != nil && err != sql.ErrNoRows {
 		slog.Error("error pulling user's transactions", "error", err.Error(), "userID", userID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error pulling user transactions..."})
