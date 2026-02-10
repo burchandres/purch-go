@@ -1,0 +1,9 @@
+.env
+.env.*
+initdb/
+docker-compose.yml
+README.md
+Taskfile.yaml
+purch
+purch-webhook
+.gitignore
