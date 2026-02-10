@@ -39,7 +39,7 @@ func main() {
 			panic(err)
 		}
 	})
-	slog.Info("api server running", "port", config.WebhookPort)
+	slog.Info("api server running", "port", config.ApiPort)
 
 	// watch for shutdown signals
 	signalChan := make(chan os.Signal, 1)

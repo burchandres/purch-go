@@ -6,7 +6,13 @@ This is a golang version of the Purch backend with improvements to database sche
 
 This uses [task](https://taskfile.dev/) in place of makefiles. 
 
-If you are a developer ask me for the plaid sandbox API keys and secret. Then you can spin up the docker containers with:
+If you are a developer ask me for the plaid sandbox API keys and secret. Paste them into your `.env` file which you get by copying the template:
+
+```bash
+cp .env.template .env
+```
+
+Then you can spin up the docker containers with:
 
 ```bash
 task build
