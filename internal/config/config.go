@@ -97,7 +97,6 @@ func loadConfig() Config {
 	slog.Info("log level set", "level", config.LogLevel)
 	slog.Info("gin mode set", "mode", config.GinMode)
 	slog.Info("webhook url set", "url", config.WebhookUrl)
-	slog.Debug("viper settings", "settings", viper.AllSettings())
 	slog.Debug("config values", "config", config)
 
 	return config
