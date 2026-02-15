@@ -20,7 +20,7 @@ import (
 
 func main() {
 	// get service configurations
-	config := config.GetConfig()
+	config := config.GetCachedConfig()
 
 	// setup database connection pool
 	if err := database.Init(config.PostgresUrl); err != nil {
@@ -57,7 +57,7 @@ func main() {
 	slog.Info("shutdown complete.")
 }
 
-func getApiServer(config *config.Config) *http.Server {
+func getApiServer(config config.Config) *http.Server {
 	router := gin.Default()
 
 	router.GET("/ping", func(c *gin.Context) {

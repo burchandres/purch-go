@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	config := config.GetConfig()
+	config := config.GetCachedConfig()
 	server := webhook.GetWebhookServer(config)
 
 	var wg sync.WaitGroup

@@ -31,7 +31,7 @@ func SetupUserEndpoints(r *gin.Engine) {
 }
 
 func registerUser(c *gin.Context) {
-	config := config.GetConfig()
+	config := config.GetCachedConfig()
 	// Implement user registration logic here
 	var newUser database.User
 
@@ -172,7 +172,7 @@ func getLinkToken(c *gin.Context) {
 	user, _ := c.Get("user")
 	userID := user.(database.User).ID.String()
 	plaidClient := utils.GetPlaidClient()
-	config := config.GetConfig()
+	config := config.GetCachedConfig()
 
 	requestUser := plaid.NewLinkTokenCreateRequestUser(userID)
 

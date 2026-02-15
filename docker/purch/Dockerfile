@@ -1,5 +1,5 @@
 # Stage 1: Build stage
-FROM golang:1.25-alpine AS dependencies
+FROM golang:1.26-alpine AS dependencies
 
 # Set working directory
 WORKDIR /app
