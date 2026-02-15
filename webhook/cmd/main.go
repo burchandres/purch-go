@@ -21,6 +21,8 @@ func main() {
 	var wg sync.WaitGroup
 
 	wg.Go(func() {
+		defer wg.Done()
+		
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			panic(err)
 		}
