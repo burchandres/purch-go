@@ -13,7 +13,7 @@ import (
 	"purch/internal/config"
 )
 
-func GetWebhookServer(config *config.Config) *http.Server {
+func GetWebhookServer(config config.Config) *http.Server {
 	router := gin.Default()
 	// quick healthcheck
 	router.GET("/ping", func(c *gin.Context) {

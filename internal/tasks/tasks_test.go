@@ -114,7 +114,7 @@ func TestMain(m *testing.M) {
 
 func TestSyncItem(t *testing.T) {
 	plaidClient := utils.GetPlaidClient()
-	config := config.GetConfig()
+	config := config.GetCachedConfig()
 	ctx := context.Background()
 	// create sandbox item
 	publicTokenExchangeResp := createSandboxItem(t, ctx, plaidClient, FIRST_PLATYPUS_BANK, config.GetPlaidProducts())
@@ -145,7 +145,7 @@ func TestSyncItem(t *testing.T) {
 func TestSyncAccounts(t *testing.T) {
 	// setup
 	plaidClient := utils.GetPlaidClient()
-	config := config.GetConfig()
+	config := config.GetCachedConfig()
 	ctx := context.Background()
 	// create sandbox item
 	publicTokenExchangeResp := createSandboxItem(t, ctx, plaidClient, FIRST_PLATYPUS_BANK, config.GetPlaidProducts())
@@ -176,7 +176,7 @@ func TestSyncAccounts(t *testing.T) {
 func TestSyncTransactions(t *testing.T) {
 	// setup
 	plaidClient := utils.GetPlaidClient()
-	config := config.GetConfig()
+	config := config.GetCachedConfig()
 	ctx := context.Background()
 	// create sandbox item
 	publicTokenExchangeResp := createSandboxItem(t, ctx, plaidClient, FIRST_PLATYPUS_BANK, config.GetPlaidProducts())

@@ -3,46 +3,45 @@ package config
 import (
 	"log/slog"
 	"os"
-	"strconv"
+	"strings"
 
 	"sync"
 
-	"github.com/joho/godotenv"
 	"github.com/plaid/plaid-go/v40/plaid"
+	"github.com/spf13/viper"
 )
 
 var (
-	cfg        *Config
-	once       sync.Once
 	slogLevels = map[string]slog.Level{
-		"DEBUG": slog.LevelDebug,
-		"INFO":  slog.LevelInfo,
-		"WARN":  slog.LevelWarn,
-		"ERROR": slog.LevelError,
+		"debug": slog.LevelDebug,
+		"info":  slog.LevelInfo,
+		"warn":  slog.LevelWarn,
+		"error": slog.LevelError,
 	}
+	GetCachedConfig = sync.OnceValue(loadConfig)
 )
 
 type Config struct {
 	// General settings
-	LogLevel    string
-	ApiPort     int
-	WebhookPort int
-	GinMode     string
+	LogLevel    string `mapstructure:"LOG_LEVEL"`
+	ApiPort     int    `mapstructure:"API_PORT"`
+	WebhookPort int    `mapstructure:"WEBHOOK_PORT"`
+	GinMode     string `mapstructure:"GIN_MODE"`
 	// Database settings
-	PostgresUrl string
+	PostgresUrl string `mapstructure:"POSTGRES_URL"`
 	// Encryption settings
-	SecretKey           string
-	EncryptionAlgorithm string
-	BcryptCost          int
+	SecretKey           string `mapstructure:"SECRET_KEY"`
+	EncryptionAlgorithm string `mapstructure:"ENCRYPTION_ALGORITHM"`
+	BcryptCost          int    `mapstructure:"BCRYPT_COST"`
 	// Plaid settings
-	PlaidClientID     string
-	PlaidSecret       string
-	PlaidEnv          string
-	PlaidProducts     string
-	PlaidCountryCodes string
-	PlaidLanguage     string
-	PlaidRedirectUri  string
-	WebhookUrl        string
+	PlaidClientID     string `mapstructure:"PLAID_CLIENT_ID"`
+	PlaidSecret       string `mapstructure:"PLAID_SECRET"`
+	PlaidEnv          string `mapstructure:"PLAID_ENV"`
+	PlaidProducts     string `mapstructure:"PLAID_PRODUCTS"`
+	PlaidCountryCodes string `mapstructure:"PLAID_COUNTRY_CODES"`
+	PlaidLanguage     string `mapstructure:"PLAID_LANGUAGE"`
+	PlaidRedirectUri  string `mapstructure:"PLAID_REDIRECT_URI"`
+	WebhookUrl        string `mapstructure:"WEBHOOK_URL"`
 }
 
 func (c *Config) GetPlaidCountryCodes() []plaid.CountryCode {
@@ -53,87 +52,61 @@ func (c *Config) GetPlaidProducts() []plaid.Products {
 	return []plaid.Products{plaid.PRODUCTS_AUTH, plaid.PRODUCTS_TRANSACTIONS}
 }
 
-func GetConfig() *Config {
-	once.Do(func() {
-		cfg = loadConfig()
-	})
-	return cfg
+// Set sensible defaults except for plaid secret and client id
+func setConfigDefaults() {
+	viper.SetDefault("LOG_LEVEL", "DEBUG")
+	viper.SetDefault("API_PORT", 8080)
+	viper.SetDefault("WEBHOOK_PORT", 8081)
+	viper.SetDefault("GIN_MODE", "debug")
+	viper.SetDefault("POSTGRES_URL", "postgres://postgres:password@postgres:5432/purch?sslmode=disable")
+	viper.SetDefault("BCRYPT_COST", 15)
+	viper.SetDefault("PLAID_ENV", "Sandbox")
+	viper.SetDefault("PLAID_PRODUCTS", "auth,transactions")
+	viper.SetDefault("PLAID_COUNTRY_CODES", "US")
+	viper.SetDefault("PLAID_LANGUAGE", "en")
+	viper.SetDefault("PLAID_REDIRECT_URI", "http://localhost:5173/dashboard")
+	viper.SetDefault("WEBHOOK_URL", "")
 }
 
-func loadConfig() *Config {
+func loadConfig() Config {
+	setConfigDefaults()
 	// should be developing against docker deployment
-	// but also pull from .env file if it exists
-	// don't panic if nothing exists stuff will just break
-	err := godotenv.Load(
-		"/run/secrets/env",
-		".env",
-		"../.env",
-		"../../.env",
-	)
-	if err != nil {
-		slog.Error("error loading config files", "error", err.Error())
-	}
+	viper.AddConfigPath("/run/secrets")
+	viper.SetConfigName("env")
+	viper.SetConfigType("env")
 
-	config := &Config{
-		ApiPort:             getEnvVar("API_PORT", 8080),
-		WebhookPort:         getEnvVar("WEBHOOK_PORT", 8081),
-		LogLevel:            getEnvVar("LOG_LEVEL", "DEBUG"),
-		GinMode:             getEnvVar("GIN_MODE", "debug"),
-		PostgresUrl:         getEnvVar("POSTGRES_URL", "postgres://postgres:password@postgres:5432/purch?sslmode=disable"),
-		SecretKey:           getEnvVar("SECRET_KEY", ""),
-		EncryptionAlgorithm: getEnvVar("ENCRYPTION_ALGORITHM", "HS256"),
-		BcryptCost:          getEnvVar("BCRYPT_COST", 15),
-		PlaidClientID:       getEnvVar("PLAID_CLIENT_ID", ""),
-		PlaidSecret:         getEnvVar("PLAID_SECRET", ""),
-		PlaidEnv:            getEnvVar("PLAID_ENV", "saandbox"),
-		PlaidProducts:       getEnvVar("PLAID_PRODUCTS", "auth,transactions"),
-		PlaidCountryCodes:   getEnvVar("PLAID_COUNTRY_CODES", "US"),
-		PlaidLanguage:       getEnvVar("PLAID_LANGUAGE", "en"),
-		PlaidRedirectUri:    getEnvVar("PLAID_REDIRECT_URI", "http://localhost:5173/dashboard"),
-		WebhookUrl:          getEnvVar("WEBHOOK_URL", ""),
+	viper.MustBindEnv("PLAID_CLIENT_ID")
+	viper.MustBindEnv("PLAID_SECRET")
+	viper.MustBindEnv("SECRET_KEY")
+	
+	if err := viper.ReadInConfig(); err != nil {
+		slog.Warn("could not read config file", "error", err.Error())
+	} else {
+		slog.Info("successfully loaded config")
+	}
+	
+	viper.AutomaticEnv()
+
+	var config Config
+
+	if err := viper.Unmarshal(&config); err != nil {
+		panic(err)
 	}
 
 	configureLogging(config.LogLevel)
-	slog.Info("log level set", "log-level", config.LogLevel)
-	slog.Info("gin mode set", "gin-mode", config.GinMode)
-	slog.Info("webhook url set", "webhook-url", config.WebhookUrl)
-	slog.Debug("loaded config", "config", *config)
+	slog.Info("log level set", "level", config.LogLevel)
+	slog.Info("gin mode set", "mode", config.GinMode)
+	slog.Info("webhook url set", "url", config.WebhookUrl)
+	slog.Debug("config values", "config", config)
+
 	return config
-}
-
-func getEnvVar[T string | int | bool | float64](key string, defaultValue T) T {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-
-	var result any
-	var err error
-
-	switch any(defaultValue).(type) {
-	case string:
-		result = value
-	case int:
-		result, err = strconv.Atoi(value)
-	case bool:
-		result, err = strconv.ParseBool(value)
-	case float64:
-		result, err = strconv.ParseFloat(value, 64)
-	}
-
-	if err != nil {
-		slog.Error("Error parsing %s: %v", key, err)
-		return defaultValue
-	}
-
-	return result.(T)
 }
 
 func configureLogging(logLevel string) {
 	logger := slog.New(slog.NewTextHandler(
 		os.Stdout,
 		&slog.HandlerOptions{
-			Level: slogLevels[logLevel],
+			Level: slogLevels[strings.ToLower(logLevel)],
 		},
 	),
 	)
