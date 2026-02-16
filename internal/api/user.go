@@ -14,6 +14,8 @@ import (
 	"purch/internal/utils"
 )
 
+// @BasePath /api/user
+
 func SetupUserEndpoints(r *gin.Engine) {
 	r.POST("/user/register", registerUser)
 	r.POST("/user/login", setUserCookie)
@@ -30,6 +32,15 @@ func SetupUserEndpoints(r *gin.Engine) {
 	}
 }
 
+// RegisterUser godoc
+// @Summary resgisterUser example
+// @Schemes
+// @Description do resgisterUser
+// @Tags example
+// @Accept json
+// @Produce json
+// @Success 200 {string} RegisterUser
+// @Router /api/user [get]
 func registerUser(c *gin.Context) {
 	config := config.GetConfig()
 	// Implement user registration logic here

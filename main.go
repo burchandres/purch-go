@@ -16,11 +16,22 @@ import (
 	"purch/internal/api"
 	"purch/internal/config"
 	"purch/internal/database"
+
+	docs "purch/docs"
+
+	swaggerfiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
 	// get service configurations
 	config := config.GetConfig()
+
+	// setup swagger docs
+	r := gin.Default()
+	docs.SwaggerInfo.BasePath = "/api"
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
+	r.Run(":8080")
 
 	// setup database connection pool
 	if err := database.Init(config.PostgresUrl); err != nil {
