@@ -1,7 +1,97 @@
 info:
   contact: {}
 paths:
-  /api/user:
+  /api/user/delete:
+    get:
+      consumes:
+      - application/json
+      description: do deleteUser
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: deleteUser example
+      tags:
+      - example
+  /api/user/exchange-public-token:
+    get:
+      consumes:
+      - application/json
+      description: do exchangePublicToken
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: exchangePublicToken example
+      tags:
+      - example
+  /api/user/info:
+    get:
+      consumes:
+      - application/json
+      description: do getUserInfo
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: getUserInfo example
+      tags:
+      - example
+  /api/user/link-token:
+    get:
+      consumes:
+      - application/json
+      description: do getLinkToken
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: getLinkToken example
+      tags:
+      - example
+  /api/user/login:
+    get:
+      consumes:
+      - application/json
+      description: do setUserCookie
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: setUserCookie example
+      tags:
+      - example
+  /api/user/logout:
+    get:
+      consumes:
+      - application/json
+      description: do logout
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: logout example
+      tags:
+      - example
+  /api/user/register:
     get:
       consumes:
       - application/json
@@ -14,6 +104,21 @@ paths:
           schema:
             type: string
       summary: resgisterUser example
+      tags:
+      - example
+  /api/user/update:
+    get:
+      consumes:
+      - application/json
+      description: do updateUser
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: updateUser example
       tags:
       - example
 swagger: "2.0"

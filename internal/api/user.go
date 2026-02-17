@@ -40,7 +40,7 @@ func SetupUserEndpoints(r *gin.Engine) {
 // @Accept json
 // @Produce json
 // @Success 200 {string} RegisterUser
-// @Router /api/user [get]
+// @Router /api/user/register [get]
 func registerUser(c *gin.Context) {
 	config := config.GetConfig()
 	// Implement user registration logic here
@@ -75,6 +75,15 @@ func registerUser(c *gin.Context) {
 	c.JSON(http.StatusCreated, newUser)
 }
 
+// SetUserCookie godoc
+// @Summary setUserCookie example
+// @Schemes
+// @Description do setUserCookie
+// @Tags example
+// @Accept json
+// @Produce json
+// @Success 200 {string} SetUserCookie
+// @Router /api/user/login [get]
 func setUserCookie(c *gin.Context) {
 	// pull provided user credentials for verifying login
 	var credentials struct {
@@ -122,12 +131,30 @@ func setUserCookie(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "user cookie set"})
 }
 
+// GetUserInfo godoc
+// @Summary getUserInfo example
+// @Schemes
+// @Description do getUserInfo
+// @Tags example
+// @Accept json
+// @Produce json
+// @Success 200 {string} getUserInfo
+// @Router /api/user/info [get]
 func getUserInfo(c *gin.Context) {
 	// get user information from db
 	user, _ := c.Get("user")
 	c.JSON(http.StatusOK, user)
 }
 
+// Logout godoc
+// @Summary logout example
+// @Schemes
+// @Description do logout
+// @Tags example
+// @Accept json
+// @Produce json
+// @Success 200 {string} logout
+// @Router /api/user/logout [get]
 func logout(c *gin.Context) {
 	// delete cookie for user
 	deleteCookie(c)
@@ -147,6 +174,15 @@ func deleteCookie(c *gin.Context) {
 }
 
 // TODO: call `/item/remove` Plaid endpoint to cancel associated access tokens to prevent unnecessary billing
+// DeleteUser godoc
+// @Summary deleteUser example
+// @Schemes
+// @Description do deleteUser
+// @Tags example
+// @Accept json
+// @Produce json
+// @Success 200 {string} DeleteUser
+// @Router /api/user/delete [get]
 func deleteUser(c *gin.Context) {
 	// get user id from context
 	user, _ := c.Get("user")
@@ -160,6 +196,15 @@ func deleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "user deleted and cookie session cleared"})
 }
 
+// UpdateUser godoc
+// @Summary updateUser example
+// @Schemes
+// @Description do updateUser
+// @Tags example
+// @Accept json
+// @Produce json
+// @Success 200 {string} UpdateUser
+// @Router /api/user/update [get]
 func updateUser(c *gin.Context) {
 	user, _ := c.Get("user")
 	userID := user.(database.User).ID
@@ -179,6 +224,15 @@ func updateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "user updated successfully"})
 }
 
+// GetLinkToken godoc
+// @Summary getLinkToken example
+// @Schemes
+// @Description do getLinkToken
+// @Tags example
+// @Accept json
+// @Produce json
+// @Success 200 {string} GetLinkToken
+// @Router /api/user/link-token [get]
 func getLinkToken(c *gin.Context) {
 	user, _ := c.Get("user")
 	userID := user.(database.User).ID.String()
@@ -235,6 +289,15 @@ func getLinkToken(c *gin.Context) {
 	)
 }
 
+// ExchangePublicToken godoc
+// @Summary exchangePublicToken example
+// @Schemes
+// @Description do exchangePublicToken
+// @Tags example
+// @Accept json
+// @Produce json
+// @Success 200 {string} ExchangePublicToken
+// @Router /api/user/exchange-public-token [get]
 func exchangePublicToken(c *gin.Context) {
 	user, _ := c.Get("user")
 	userID := user.(database.User).ID
