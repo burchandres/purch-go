@@ -36,7 +36,7 @@ func SetupUserEndpoints(r *gin.Engine) {
 // @Summary resgisterUser example
 // @Schemes
 // @Description do resgisterUser
-// @Tags example
+// @Tags user
 // @Accept json
 // @Produce json
 // @Success 200 {string} RegisterUser
@@ -79,7 +79,7 @@ func registerUser(c *gin.Context) {
 // @Summary setUserCookie example
 // @Schemes
 // @Description do setUserCookie
-// @Tags example
+// @Tags user
 // @Accept json
 // @Produce json
 // @Success 200 {string} SetUserCookie
@@ -135,7 +135,7 @@ func setUserCookie(c *gin.Context) {
 // @Summary getUserInfo example
 // @Schemes
 // @Description do getUserInfo
-// @Tags example
+// @Tags user
 // @Accept json
 // @Produce json
 // @Success 200 {string} getUserInfo
@@ -150,7 +150,7 @@ func getUserInfo(c *gin.Context) {
 // @Summary logout example
 // @Schemes
 // @Description do logout
-// @Tags example
+// @Tags user
 // @Accept json
 // @Produce json
 // @Success 200 {string} logout
@@ -178,7 +178,7 @@ func deleteCookie(c *gin.Context) {
 // @Summary deleteUser example
 // @Schemes
 // @Description do deleteUser
-// @Tags example
+// @Tags user
 // @Accept json
 // @Produce json
 // @Success 200 {string} DeleteUser
@@ -200,7 +200,7 @@ func deleteUser(c *gin.Context) {
 // @Summary updateUser example
 // @Schemes
 // @Description do updateUser
-// @Tags example
+// @Tags user
 // @Accept json
 // @Produce json
 // @Success 200 {string} UpdateUser
@@ -228,7 +228,7 @@ func updateUser(c *gin.Context) {
 // @Summary getLinkToken example
 // @Schemes
 // @Description do getLinkToken
-// @Tags example
+// @Tags user
 // @Accept json
 // @Produce json
 // @Success 200 {string} GetLinkToken
@@ -293,7 +293,7 @@ func getLinkToken(c *gin.Context) {
 // @Summary exchangePublicToken example
 // @Schemes
 // @Description do exchangePublicToken
-// @Tags example
+// @Tags user
 // @Accept json
 // @Produce json
 // @Success 200 {string} ExchangePublicToken

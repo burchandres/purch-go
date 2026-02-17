@@ -15,7 +15,7 @@ paths:
             type: string
       summary: deleteUser example
       tags:
-      - example
+      - user
   /api/user/exchange-public-token:
     get:
       consumes:
@@ -30,7 +30,7 @@ paths:
             type: string
       summary: exchangePublicToken example
       tags:
-      - example
+      - user
   /api/user/info:
     get:
       consumes:
@@ -45,7 +45,7 @@ paths:
             type: string
       summary: getUserInfo example
       tags:
-      - example
+      - user
   /api/user/link-token:
     get:
       consumes:
@@ -60,7 +60,7 @@ paths:
             type: string
       summary: getLinkToken example
       tags:
-      - example
+      - user
   /api/user/login:
     get:
       consumes:
@@ -75,7 +75,7 @@ paths:
             type: string
       summary: setUserCookie example
       tags:
-      - example
+      - user
   /api/user/logout:
     get:
       consumes:
@@ -90,7 +90,7 @@ paths:
             type: string
       summary: logout example
       tags:
-      - example
+      - user
   /api/user/register:
     get:
       consumes:
@@ -105,7 +105,7 @@ paths:
             type: string
       summary: resgisterUser example
       tags:
-      - example
+      - user
   /api/user/update:
     get:
       consumes:
@@ -120,5 +120,5 @@ paths:
             type: string
       summary: updateUser example
       tags:
-      - example
+      - user
 swagger: "2.0"

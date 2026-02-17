@@ -14,7 +14,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "user"
                 ],
                 "summary": "deleteUser example",
                 "responses": {
@@ -37,7 +37,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "user"
                 ],
                 "summary": "exchangePublicToken example",
                 "responses": {
@@ -60,7 +60,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "user"
                 ],
                 "summary": "getUserInfo example",
                 "responses": {
@@ -83,7 +83,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "user"
                 ],
                 "summary": "getLinkToken example",
                 "responses": {
@@ -106,7 +106,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "user"
                 ],
                 "summary": "setUserCookie example",
                 "responses": {
@@ -129,7 +129,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "user"
                 ],
                 "summary": "logout example",
                 "responses": {
@@ -152,7 +152,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "user"
                 ],
                 "summary": "resgisterUser example",
                 "responses": {
@@ -175,7 +175,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "user"
                 ],
                 "summary": "updateUser example",
                 "responses": {
