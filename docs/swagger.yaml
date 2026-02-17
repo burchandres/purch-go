@@ -1,3 +1,21 @@
+definitions:
+  database.User:
+    properties:
+      first_name:
+        type: string
+      id:
+        type: string
+      income:
+        type: number
+      income_rate:
+        type: string
+      last_name:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    type: object
 info:
   contact: {}
 paths:
@@ -92,10 +110,17 @@ paths:
       tags:
       - user
   /api/user/register:
-    get:
+    post:
       consumes:
       - application/json
       description: do resgisterUser
+      parameters:
+      - description: User Registration Info
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/database.User'
       produces:
       - application/json
       responses:

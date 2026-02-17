@@ -154,7 +154,7 @@ const docTemplate = `{
             }
         },
         "/api/user/register": {
-            "get": {
+            "post": {
                 "description": "do resgisterUser",
                 "consumes": [
                     "application/json"
@@ -166,6 +166,17 @@ const docTemplate = `{
                     "user"
                 ],
                 "summary": "resgisterUser example",
+                "parameters": [
+                    {
+                        "description": "User Registration Info",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/database.User"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -196,6 +207,34 @@ const docTemplate = `{
                             "type": "string"
                         }
                     }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "database.User": {
+            "type": "object",
+            "properties": {
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "income": {
+                    "type": "number"
+                },
+                "income_rate": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
                 }
             }
         }

@@ -39,8 +39,9 @@ func SetupUserEndpoints(r *gin.Engine) {
 // @Tags user
 // @Accept json
 // @Produce json
-// @Success 200 {string} RegisterUser
-// @Router /api/user/register [get]
+// @Param user body database.User true "User Registration Info"
+// @Success 200 {string} registerUser
+// @Router /api/user/register [post]
 func registerUser(c *gin.Context) {
 	config := config.GetConfig()
 	// Implement user registration logic here
@@ -82,7 +83,7 @@ func registerUser(c *gin.Context) {
 // @Tags user
 // @Accept json
 // @Produce json
-// @Success 200 {string} SetUserCookie
+// @Success 200 {string} setUserCookie
 // @Router /api/user/login [get]
 func setUserCookie(c *gin.Context) {
 	// pull provided user credentials for verifying login
@@ -181,7 +182,7 @@ func deleteCookie(c *gin.Context) {
 // @Tags user
 // @Accept json
 // @Produce json
-// @Success 200 {string} DeleteUser
+// @Success 200 {string} deleteUser
 // @Router /api/user/delete [get]
 func deleteUser(c *gin.Context) {
 	// get user id from context
@@ -203,7 +204,7 @@ func deleteUser(c *gin.Context) {
 // @Tags user
 // @Accept json
 // @Produce json
-// @Success 200 {string} UpdateUser
+// @Success 200 {string} updateUser
 // @Router /api/user/update [get]
 func updateUser(c *gin.Context) {
 	user, _ := c.Get("user")
@@ -231,7 +232,7 @@ func updateUser(c *gin.Context) {
 // @Tags user
 // @Accept json
 // @Produce json
-// @Success 200 {string} GetLinkToken
+// @Success 200 {string} getLinkToken
 // @Router /api/user/link-token [get]
 func getLinkToken(c *gin.Context) {
 	user, _ := c.Get("user")
@@ -296,7 +297,7 @@ func getLinkToken(c *gin.Context) {
 // @Tags user
 // @Accept json
 // @Produce json
-// @Success 200 {string} ExchangePublicToken
+// @Success 200 {string} exchangePublicToken
 // @Router /api/user/exchange-public-token [get]
 func exchangePublicToken(c *gin.Context) {
 	user, _ := c.Get("user")
