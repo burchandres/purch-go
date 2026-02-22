@@ -22,7 +22,7 @@ func main() {
 
 	wg.Go(func() {
 		defer wg.Done()
-		
+
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			panic(err)
 		}

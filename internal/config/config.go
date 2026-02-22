@@ -78,13 +78,13 @@ func loadConfig() Config {
 	viper.MustBindEnv("PLAID_CLIENT_ID")
 	viper.MustBindEnv("PLAID_SECRET")
 	viper.MustBindEnv("SECRET_KEY")
-	
+
 	if err := viper.ReadInConfig(); err != nil {
 		slog.Warn("could not read config file", "error", err.Error())
 	} else {
 		slog.Info("successfully loaded config")
 	}
-	
+
 	viper.AutomaticEnv()
 
 	var config Config

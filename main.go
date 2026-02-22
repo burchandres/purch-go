@@ -36,7 +36,7 @@ func main() {
 	// run server
 	wg.Go(func() {
 		defer wg.Done()
-		
+
 		if err := apiServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			panic(err)
 		}
