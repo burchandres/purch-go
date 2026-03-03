@@ -19,17 +19,31 @@ import (
 	"purch/internal/config"
 )
 
+// JWT header at `Plaid-Verification`
+/*
+{
+  "alg": "ES256",
+  "kid": "bfbd5111-8e33-4643-8ced-b2e642a72f3c",
+  "typ": "JWT"
+}
+*/
+type PlaidJWT struct {
+	Algorithm string `json:"alg"`
+	KeyID     string `json:"kid"`
+	Type      string `json:"typ"`
+}
+
 // Example payload:
 /*
-	{
-	  "webhook_type": "TRANSACTIONS",
-	  "webhook_code": "SYNC_UPDATES_AVAILABLE",
-	  "item_id": "wz666MBjYWTp2PDzzggYhM6oWWmBb",
-	  "user_id": "usr_9nSp2KuZ2x4JDw",
-	  "initial_update_complete": true,
-	  "historical_update_complete": false,
-	  "environment": "production"
-	}
+{
+  "webhook_type": "TRANSACTIONS",
+  "webhook_code": "SYNC_UPDATES_AVAILABLE",
+  "item_id": "wz666MBjYWTp2PDzzggYhM6oWWmBb",
+  "user_id": "usr_9nSp2KuZ2x4JDw",
+  "initial_update_complete": true,
+  "historical_update_complete": false,
+  "environment": "production"
+}
 */
 type WebhookPayLoad struct {
 	WebhookType              string `json:"webhook_type"`
