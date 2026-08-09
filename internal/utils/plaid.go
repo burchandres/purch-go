@@ -15,7 +15,7 @@ var (
 
 func GetPlaidClient() *plaid.APIClient {
 	plaidOnce.Do(func() {
-		config := config.GetConfig()
+		config := config.GetCachedConfig()
 		// setup plaid configuration
 		configuration := plaid.NewConfiguration()
 		configuration.AddDefaultHeader("PLAID-CLIENT-ID", config.PlaidClientID)

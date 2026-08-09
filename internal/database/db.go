@@ -15,7 +15,7 @@ func Init(connString string) error {
 	// Create a pgdriver connector
 	sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(connString)))
 
-	// Configure connection pool (adjust these to match your needs)
+	// Configure connection pool
 	maxOpenConns := 4 * runtime.GOMAXPROCS(0)
 	sqldb.SetMaxOpenConns(maxOpenConns)
 	sqldb.SetMaxIdleConns(maxOpenConns)

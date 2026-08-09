@@ -36,7 +36,7 @@ func StoreUser(ctx context.Context, user User) error {
 }
 
 func UpdateUser(ctx context.Context, id uuid.UUID, updateParams UpdateUserParams) error {
-	config := config.GetConfig()
+	config := config.GetCachedConfig()
 	stmt := db.NewUpdate().Model((*User)(nil))
 	// build up query
 	if updateParams.FirstName != nil {

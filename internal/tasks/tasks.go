@@ -69,7 +69,7 @@ func SyncItem(
 	itemID string,
 	accessToken string,
 ) error {
-	config := config.GetConfig()
+	config := config.GetCachedConfig()
 	plaidClient := utils.GetPlaidClient()
 	slog.Debug("pulling item info from plaid for local persistence.", "itemID", itemID, "userID", userID)
 	// create itemGetRequest
@@ -84,14 +84,14 @@ func SyncItem(
 	// create query params for storing item
 	var itemParams database.Item
 	itemParams.ID = itemID
-	
+
 	hashedAccessToken, err := bcrypt.GenerateFromPassword([]byte(accessToken), config.BcryptCost)
 	if err != nil {
 		slog.Error("error hashing access token for item", "item-id", itemID, "user-id", userID)
 		return ErrHashingAccessToken
 	}
 	itemParams.AccessToken = string(hashedAccessToken)
-	
+
 	itemParams.UserID = userID
 	itemParams.Name = item.GetInstitutionName()
 	// store the item
